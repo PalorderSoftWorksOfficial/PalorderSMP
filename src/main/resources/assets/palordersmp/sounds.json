@@ -30,5 +30,13 @@
                 "stream": true
             }
         ]
-    }
+    },
+  "zero": {
+    "sounds": [
+      {
+        "name": "palordersmp:zero",
+        "stream": true
+      }
+    ]
+  }
 }
