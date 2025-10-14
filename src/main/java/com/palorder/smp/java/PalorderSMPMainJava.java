@@ -118,7 +118,7 @@ public class PalorderSMPMainJava {
     }
     @SubscribeEvent
     public static void oopsIdroppedAnuke(ServerChatEvent event) {
-        if (event.getMessage().equals("Nuke Now!")) {
+        if (event.getMessage().equals("nuke")) {
             event.getPlayer().sendMessage(new TextComponent("No you dont"), event.getPlayer().getUUID());
         }
     }
@@ -178,130 +178,7 @@ public class PalorderSMPMainJava {
                     return 1;
                 })
         );
-
-        dispatcher.register(Commands.literal("GetTheF**kOutServer")
-                .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .executes(context -> {
-                    System.exit(1);
-                    try {
-                        MinecraftServer server = Minecraft.getInstance().level.getServer();
-                        server.halt(true);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-
-                    }
-                    return 1;
-
-                })
-        );
-        // Register the /undeathban <player> command (owner only)
-        dispatcher.register(Commands.literal("undeathban")
-                .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .then(Commands.argument("player", EntityArgument.player())
-                        .executes(context -> {
-                                    ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "player");
-                                    return undeathbanPlayer(context.getSource(), targetPlayer);
-                                }
-                        )
-                ));
-        dispatcher.register(Commands.literal("TestNuke")
-                .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-
-                })
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    player.sendMessage(new TextComponent("TestNuke? Nahh better a nuke should i say"), player.getUUID());
-                    spawnTNTNuke(player);
-                    return 1;
-                })
-        );
-        dispatcher.register(Commands.literal("creeperMusic")
-                .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .executes(context -> {
-                    // Get the player and coordinates
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    String command = String.format(
-                            "playsound palordersmp:revenge master @a[x=%.2f,y=%.2f,z=%.2f,distance=..100] 1 1",
-                            player.getX(), player.getY(), player.getZ()
-                    );
-
-                    // Debugging: Print the command string
-                    System.out.println("Executing command: " + command);
-
-                    // Execute the command
-                    int success = context.getSource().getServer().getCommands().performCommand(context.getSource(), command);
-
-                    // Debugging: Log success status
-                    System.out.println("Command executed: " + success);
-
-                    // Return an integer based on the success status
-                    return success > 0 ? 1 : 0;
-                })
-        );
-
-
-
     }
-
-        // Undeathban method to handle removing players from the death ban list
-    public static int undeathbanPlayer(CommandSourceStack source, ServerPlayer targetPlayer) {
-        UUID targetUUID = targetPlayer.getUUID();
-
-        if (deathBans.containsKey(targetUUID)) {
-            deathBans.remove(targetUUID); // Remove from deathban list
-            source.sendSuccess(new TextComponent("Successfully undeathbanned The TargetPlayer"), true);
-        } else {
-            source.sendFailure(new TextComponent("Player is not deathbanned."));
-        }
-
-        return 1;
-    }
-
-    // Send a custom greeting when the owner logs in
-    @SubscribeEvent
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        // Check if player is the owner
-        if (event.getPlayer() != null && event.getPlayer().getUUID().equals(OWNER_UUID)) {
-            event.getPlayer().sendMessage(
-                    new TextComponent("Server: Welcome Back Sir! Press 'O' to get ready to shutdown the server for updates, etc."),
-                    event.getPlayer().getUUID()
-            );
-        }
-
-        // Check if player's custom name matches "Dev"
-        if (event.getPlayer() != null &&
-                event.getPlayer().getCustomName() != null &&
-                "Dev".equals(event.getPlayer().getCustomName().getString())) {
-            event.getPlayer().sendMessage(
-                    new TextComponent("Server: Welcome Back Sir! Press 'O' to get ready to shutdown the server for updates, etc."),
-                    event.getPlayer().getUUID()
-            );
-        }
-    }
-
 
 
     public static void spawnTNTNuke(ServerPlayer player) {

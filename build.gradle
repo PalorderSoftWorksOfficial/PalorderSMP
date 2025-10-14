@@ -63,8 +63,7 @@ repositories {
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:1.18.2-40.2.21"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.6.21" // Align with KotlinForForge
+
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -79,12 +78,12 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         attributes(
-                "Specification-Title": "PalorderCorporationSMP",
-                "Specification-Vendor": "PalorderCorporation",
+                "Specification-Title": "PalorderSMP",
+                "Specification-Vendor": "PalorderSoftWorks",
                 "Specification-Version": "1.0",
                 "Implementation-Title": "${project.name}",
                 "Implementation-Version": "${project.version}",
-                "Implementation-Vendor": "PalorderCorporation",
+                "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": "${project.name.toLowerCase()}"
         )
     }
