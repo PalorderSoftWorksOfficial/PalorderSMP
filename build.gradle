@@ -1,0 +1,106 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+' // Use the latest stable ForgeGradle
+    }
+}
+
+plugins {
+    id 'eclipse'
+    id 'maven-publish'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.21' // Use Kotlin version compatible with Forge
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+version = '2.0'
+group = 'com.palorder.smp.java'
+archivesBaseName = 'PalorderSMP'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+minecraft {
+    mappings channel: 'official', version: '1.18.2'
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                palordersmp {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                palordersmp {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.resources.srcDirs = ['src/generated/resources', 'src/main/resources']
+
+repositories {
+    mavenCentral()
+    maven { url = "https://maven.minecraftforge.net/" }
+    maven { url = "https://libraries.minecraft.net/" }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:1.18.2-40.2.21"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.6.21" // Align with KotlinForForge
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('--add-opens=java.base/java.lang=ALL-UNNAMED')
+}
+
+jar {
+    from("src/main/resources") {
+        include "META-INF/mods.toml"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes(
+                "Specification-Title": "PalorderCorporationSMP",
+                "Specification-Vendor": "PalorderCorporation",
+                "Specification-Version": "1.0",
+                "Implementation-Title": "${project.name}",
+                "Implementation-Version": "${project.version}",
+                "Implementation-Vendor": "PalorderCorporation",
+                "Automatic-Module-Name": "${project.name.toLowerCase()}"
+        )
+    }
+}
+
+jar.finalizedBy('reobfJar')
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}

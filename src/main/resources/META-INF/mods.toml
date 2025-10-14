@@ -1,0 +1,37 @@
+modLoader="javafml"
+loaderVersion="[40,)"
+license="All rights reserved"
+issueTrackerURL="https://github.com/PalorderCorporationOfficial/PalorderSMP/issues"
+
+[[mods]]
+modId = "palordersmp"
+version="${file.jarVersion}"
+displayName="PalorderSMP"
+displayURL="https://github.com/PalorderCorporationOfficial/PalorderSMP"
+logoFile="LongLiveTheEmpire.png"
+credits="Thanks to Kotlin and Forge for making this mod possible."
+authors="Main Programmer: Maneewan Van Breugel; Special Thanks: Michaël van de Giessen aka tubbynl"
+description='''Palorder Corporation Server Mod.
+A project by a beginner programmer that adds fun and exciting features.
+'''
+
+[[dependencies.palordersmp]]
+modId="forge"
+mandatory=true
+versionRange="[40.1.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.palordersmp]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.18.2,1.19)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.palordersmp]]
+modId="kotlinforforge"
+mandatory=true
+versionRange="[3.12.0,)"
+ordering="NONE"
+side="BOTH"

@@ -1,0 +1,34 @@
+{
+    "revenge": {
+        "sounds": [
+            {
+                "name": "palordersmp:revenge",
+                "stream": true
+            }
+        ]
+    },
+    "destroyerofworlds": {
+        "sounds": [
+            {
+                "name": "palordersmp:meowphenheimer",
+                "stream": true
+            }
+        ]
+    },
+    "dontstop": {
+        "sounds": [
+            {
+                "name": "palordersmp:dontstop",
+                "stream": true
+            }
+        ]
+    },
+    "wildside": {
+        "sounds": [
+            {
+                "name": "palordersmp:wildside",
+                "stream": true
+            }
+        ]
+    }
+}
