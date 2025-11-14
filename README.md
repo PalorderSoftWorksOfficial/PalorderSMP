@@ -1,27 +1,42 @@
-This is the PalorderSMP Mod its open source and be free to contact me if you want me to add features but not intense one's By the way if you're a skid are someone who wants the jar file for this mod well you need to trade so let gradle eat all your performance and after that it will poop it out ok enough jokes lets get to the real stuff
-## How to build the project
+# PalorderSMP Mod
 
-## Step One
-Clone this repo and look for gradlew.bat BUT replace the contents from gradle.properties from this:" # Sets default memory used for gradle commands. Can be overridden by user or command line properties.
-and replace it with this: "# Sets default memory used for gradle commands. Can be overridden by user or command line properties.
-# This is required to provide enough memory for the Minecraft decompilation process and replace the inside of gradle.properties with the lines that are Below
+PalorderSMP-Tweaked is an open-source server-side mod created by PalorderSoftWorksOfficial. Feel free to contact me if you want new features added (but nothing too intense 😉).
+
+> **Note:** If you're looking for the `.jar` without building, you’ll need to compile it yourself—let Gradle handle the hard work and it will generate a functional mod for you.
+
+## How to Build the Project
+
+### Step 1: Clone the Repository
+Clone this repository and locate the `gradlew.bat` file. Then, update your `gradle.properties` file with the following content:
+
+```properties
+# Sets default memory used for Gradle commands. Can be overridden by user or command line properties.
+# Required to provide enough memory for Minecraft decompilation process
 org.gradle.jvmargs=-Xmx4g -Xms4g -Xss2m
 org.gradle.daemon=true
-## Step Two
+```
 
-Run gradlew.bat file And wait for it on the lowest line saying "Build Completed Or succesfully Executed Build or Successfully generated Build"
+### Step 2: Run Gradle
+Run the `gradlew.bat` file. Wait until you see one of these messages on the last line:  
+- `Build Completed`  
+- `Successfully Executed Build`  
+- `Successfully Generated Build`
 
-## How to get the Mod file (".jar")
+## How to Get the Mod File (`.jar`)
+Once the build completes:  
+1. Look in the **project root directory**.  
+2. Open the `build` folder, then the `libs` folder inside it.  
+3. Inside, you’ll find the generated `.jar` file ready to use with **Forge 1.18.2+**.
 
-After Run gradlew.bat task is completed look in the project root directory and look for the generated build folder and look for a libs folder inside of build folder and there inside will be a functional .jar file that u can put in your forge 1.18.2 mod loader
+## Reporting Issues
+If you encounter problems or bugs, report them here: [PalorderSMP Issues Page](https://github.com/PalorderSoftWorksOfficial/PalorderSMP/issues)
 
-## Where to report problems to developers
+## Requirements
+- **JDK 17+** installed. Download from [Adoptium](https://adoptium.net/temurin/releases/?version=17)  
+- **At least 8GB RAM** on your system (Gradle uses 4GB; the rest is for your system)  
+- **Minecraft 1.20.1** compatible Forge loader
 
-You can find our issues page at: [Issues Page](https://github.com/PalorderCorporationOfficial/PalorderSMP/issues)
-
-## Requirements IMPORTANT!!
-Have JDK 17+ installed on your Computer If you don't have It download it from this: [JDK 17](https://adoptium.net/temurin/releases/?version=17)
-Have least 8GB of ram installed on your computer So you can Build the project ("It uses 4GB of ram and that other 4GB will be used for system")
-You can DM me on discord and ask for a copy of this that is non copyrighted so you can like earn money from this project and resell IF You Paid For the non-copylocked version
-My discord is @PalorderCorporation
-Read license.md its located at [License](License.md)
+## Licensing & Support
+- Read the [License](License.md) for terms and usage.  
+- You can DM me on Discord for non-copylocked versions or commercial inquiries: **@PalorderCorporation**  
+- Repository: [PalorderSMP on GitHub](https://github.com/PalorderSoftWorksOfficial/PalorderSMP)
