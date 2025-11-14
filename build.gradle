@@ -62,6 +62,12 @@ minecraft {
 // Repositories
 // ======================================================
 repositories {
+    maven {
+        url "https://maven.squiddev.cc"
+        content {
+            includeGroup("cc.tweaked")
+        }
+    }
     maven { url = "https://maven.minecraftforge.net" }
     mavenCentral()
 }
