@@ -74,22 +74,22 @@ import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[
 import dan200.computercraft.api.detail.DetailProvider;
 import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
 
-@Mod("palordersmp")
-@Mod.EventBusSubscriber(modid = "palordersmp", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod("palordersmp-tweaked")
+@Mod.EventBusSubscriber(modid = "palordersmp-tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PalorderSMPMainJava {
 
     // ---------------- Deferred Registers ----------------
     public static final DeferredRegister<Item> ITEMS =
-            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp");
+            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp-tweaked");
 
     public static final RegistryObject<Item> deathban_revive =
             ITEMS.register("deathban_revive", () -> new Item(new Item.Properties()));
 
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
-            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "palordersmp");
+            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "palordersmp-tweaked");
 
     public static final RegistryObject<SoundEvent> REVENGE_SOUND_EVENT =
-            SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp", "revenge")));
+            SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp-tweaked", "revenge")));
 
     // ---------------- Server / Scheduler ----------------
     private static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
