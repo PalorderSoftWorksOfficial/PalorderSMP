@@ -1,6 +1,9 @@
 package com.palorder.smp.java;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -167,8 +170,35 @@ public class PalorderSMPMainJava {
                     }
                     return 1;
                 }));
-
         dispatcher.register(Commands.literal("orbitalConfirm")
+                .requires(source -> {
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                || "dev".equalsIgnoreCase(player.getName().getString());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .then(Commands.argument("amount", IntegerArgumentType.integer(10))
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getPlayerOrException();
+                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
+                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, tntCount);
+                            else player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                            return 10;
+                        })
+                )
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, 1);
+                    else player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                    return 1;
+                })
+        );
+
+        dispatcher.register(Commands.literal("loadallchunks")
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
@@ -180,27 +210,7 @@ public class PalorderSMPMainJava {
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                        spawnTNTNuke(player);
-                    } else {
-                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                    }
-                    return 1;
-                }));
-
-        dispatcher.register(Commands.literal("loadallchunks")
-                .requires(source -> {
-                    try {
-                        var player = source.getPlayerOrException();
-                        return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString());
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    ServerLevel world = player.serverLevel(); // or player.serverLevel()
+                    ServerLevel world = player.serverLevel();
 
                     Set<ChunkPos> chunks = pausedChunks.get(world);
                     if (chunks != null) {
@@ -230,7 +240,7 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Nuke Spawn ----------------
-    public static void spawnTNTNuke(ServerPlayer player) {
+    public static void spawnTNTNuke(ServerPlayer player,int tnts) {
         ServerLevel world = (ServerLevel) player.level();
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
@@ -242,9 +252,9 @@ public class PalorderSMPMainJava {
         Vec3 hitLocation = hitResult != null ? hitResult.getLocation() : end;
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
-        player.teleportTo(world, player.getX(), player.getY() + 200, player.getZ(), player.getYRot(), player.getXRot());
+        player.teleportTo(world, player.getX(), player.getY() + 30, player.getZ(), player.getYRot(), player.getXRot());
 
-        int totalTNT = 2000;
+        int totalTNT = tnts > 0 ? tnts : 100;
         double baseY = hitLocation.y;
 
         for (int i = 0; i < totalTNT; i++) {
