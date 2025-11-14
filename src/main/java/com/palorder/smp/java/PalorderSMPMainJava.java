@@ -93,6 +93,7 @@ public class PalorderSMPMainJava {
 
     // ---------------- Server / Scheduler ----------------
     private static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
+    private static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
     private static final Set<UUID> nukePendingConfirmation = new HashSet<>();
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -150,7 +151,7 @@ public class PalorderSMPMainJava {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString());
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -172,7 +173,7 @@ public class PalorderSMPMainJava {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString());
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
