@@ -1,218 +1,236 @@
 package com.palorder.smp.java;
 
 import com.mojang.brigadier.CommandDispatcher;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Registry;
-import net.minecraft.network.chat.TextComponent;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.ClipContext;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
-import net.minecraft.commands.Commands;
-import net.minecraft.commands.CommandSourceStack;
+
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.util.*;
 
 @Mod("palordersmp")
-@Mod.EventBusSubscriber(modid = "palordersmp",value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@Mod.EventBusSubscriber(modid = "palordersmp", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PalorderSMPMainJava {
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp");
-    public static final RegistryObject<Item> REVIVAL_ITEM = ITEMS.register("revival_item", () -> new Item(new Item.Properties()));
 
+    // ---------------- Deferred Registers ----------------
+    public static final DeferredRegister<Item> ITEMS =
+            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp");
+
+    public static final RegistryObject<Item> deathban_revive =
+            ITEMS.register("deathban_revive", () -> new Item(new Item.Properties()));
+
+    public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
+            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "palordersmp");
+
+    public static final RegistryObject<SoundEvent> REVENGE_SOUND_EVENT =
+            SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp", "revenge")));
+
+    // ---------------- Server / Scheduler ----------------
     private static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
-
-
-    private static final Map<UUID, Long> deathBans = new HashMap<>();
-
     private static final Set<UUID> nukePendingConfirmation = new HashSet<>();
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    public static final ResourceLocation REVENGE_SOUND = new ResourceLocation("palordersmp", "revenge");
-    public static final SoundEvent REVENGE_SOUND_EVENT = new SoundEvent(REVENGE_SOUND);
 
-    public static void registerSounds(IEventBus eventBus) {
-        eventBus.addGenericListener(SoundEvent.class, (RegistryEvent.Register<SoundEvent> event) -> {
-            event.getRegistry().register(REVENGE_SOUND_EVENT.setRegistryName(REVENGE_SOUND));
-        });
-    }
+    // ---------------- Nuke tracking ----------------
+    private static final Map<UUID, Vec3> nukePlayerTeleportBack = new HashMap<>();
+    private static final Map<ServerLevel, Set<ChunkPos>> pausedChunks = new HashMap<>();
+    private static final Map<ServerLevel, Set<Entity>> nukeSpawnedEntities = new HashMap<>();
 
-
-    public PalorderSMPMainJava() {
-        MinecraftForge.EVENT_BUS.register(this);
-    }
-
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
-        // Get the Minecraft server from the event
-        MinecraftServer server = event.getServer();
-        // Ensure the server is not null before proceeding
-        if (server != null) {
-            // Get the command dispatcher for registering commands
-            CommandDispatcher<CommandSourceStack> dispatcher = server.getCommands().getDispatcher();
-
-            // Register your commands with the dispatcher
-            registerCommands(dispatcher);
-        } else {
-            // Log a warning if the server is null (shouldn't happen, but just in case)
-            final Logger LOGGER = LogManager.getLogger();
-            LOGGER.warn("Minecraft server instance is null during onServerStarting how the fuck did that happen?");
-        }
-        Registry.register(Registry.SOUND_EVENT, new ResourceLocation("palordersmp", "revenge"), REVENGE_SOUND_EVENT);
-    }
-
+    // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
-
     static {
-        // Add chat triggers and corresponding item rewards
         chatItemRewards.put("gimme natherite blocks ples", new ItemStack(Items.NETHERITE_BLOCK, 64));
         chatItemRewards.put("i need food ples give me food 2 stacks ples", new ItemStack(Items.GOLDEN_CARROT, 128));
         chatItemRewards.put("gimme natherite blocks ples adn i want 2 stacks ples", new ItemStack(Items.NETHERITE_BLOCK, 128));
         chatItemRewards.put("i need food ples give me food ples", new ItemStack(Items.GOLDEN_CARROT, 64));
     }
 
+    public PalorderSMPMainJava() {
+        // Register mod event buses for items and sounds
+        ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
+        SOUND_EVENTS.register(FMLJavaModLoadingContext.get().getModEventBus());
+
+        // Register this class to the Forge event bus
+        MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    // ---------------- Chat Item Rewards ----------------
     @SubscribeEvent
     public static void handleChatItemRequests(ServerChatEvent event) {
-        String message = event.getMessage();
+        String message = event.getMessage().getString();
         ServerPlayer player = event.getPlayer();
-
-        // Check if the message matches a reward
         if (chatItemRewards.containsKey(message)) {
-            ItemStack reward = chatItemRewards.get(message);
-            player.getInventory().add(reward);
+            player.getInventory().add(chatItemRewards.get(message));
         }
     }
+
+    // ---------------- Server Events ----------------
     @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent event) throws InterruptedException {
+    public void onServerStarting(ServerStartingEvent event) {
+        registerCommands(event.getServer().getCommands().getDispatcher());
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
         scheduler.shutdown();
     }
-    @SubscribeEvent
-    public static void oopsIdroppedAnuke(ServerChatEvent event) {
-        if (event.getMessage().equals("nuke")) {
-            event.getPlayer().sendMessage(new TextComponent("No you dont"), event.getPlayer().getUUID());
-        }
-    }
+
+    // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
-        // Register the /nuke command (owner only)
         dispatcher.register(Commands.literal("InitiateNukeProtocol")
                 .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
+                    catch (Exception e) { throw new RuntimeException(e); }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-
-                    // Check if the player already has a pending confirmation
-                    if (nukePendingConfirmation.contains(player.getUUID())) {
-                        player.sendMessage(new TextComponent("You already have a pending nuke initiation confirmation! Use /confirmNukeInitiation to proceed or wait for it to expire."), player.getUUID());
+                    if (nukePendingConfirmation.contains(player.getGameProfile().getId())) {
+                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /confirmNukeInitiation"));
                     } else {
-                        // Add the player's UUID to the pending confirmation set
-                        nukePendingConfirmation.add(player.getUUID());
-                        player.sendMessage(new TextComponent("Are you sure you want to spawn 1,000 TNT? Type /confirmNukeInitiation to confirm. This will expire in 30 seconds."), player.getUUID());
-
-                        // Schedule removal of the UUID after 30 seconds
-                        scheduler.schedule(() -> {
-                            nukePendingConfirmation.remove(player.getUUID());
-                        }, 30, TimeUnit.SECONDS);
+                        nukePendingConfirmation.add(player.getGameProfile().getId());
+                        player.sendSystemMessage(Component.literal("Type /confirmNukeInitiation to spawn 2000 TNT packed in one block."));
+                        scheduler.schedule(() -> nukePendingConfirmation.remove(player.getGameProfile().getId()), 30, TimeUnit.SECONDS);
                     }
-
                     return 1;
-                })
-        );
+                }));
 
-
-// Register the confirmNuke command
         dispatcher.register(Commands.literal("confirmNukeInitiation")
                 .requires(source -> {
-                    try {
-                        return source.getPlayerOrException().getUUID().equals(OWNER_UUID);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
+                    catch (Exception e) { throw new RuntimeException(e); }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-
-                    // Check if the player's UUID is in the pending confirmation set
-                    if (nukePendingConfirmation.remove(player.getUUID())) {
-                        // Execute the nuke
+                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
                         spawnTNTNuke(player);
-                        player.sendMessage(new TextComponent("Nuke initiated!"), player.getUUID());
                     } else {
-                        player.sendMessage(new TextComponent("No pending Nuke Initiation Protocol"), player.getUUID());
+                        player.sendSystemMessage(Component.literal("No pending nuke initiation"));
                     }
-
                     return 1;
-                })
-        );
+                }));
+
+        dispatcher.register(Commands.literal("loadallchunks")
+                .requires(source -> true)
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    ServerLevel world = player.serverLevel(); // or player.serverLevel()
+
+                    Set<ChunkPos> chunks = pausedChunks.get(world);
+                    if (chunks != null) {
+                        for (ChunkPos pos : chunks) {
+                            world.getChunk(pos.x, pos.z);
+                            world.getChunkSource().getChunk(pos.x, pos.z, net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
+                        }
+
+                        Set<Entity> entities = nukeSpawnedEntities.get(world);
+                        if (entities != null) {
+                            Iterator<Entity> iterator = entities.iterator();
+                            while (iterator.hasNext()) {
+                                Entity e = iterator.next();
+                                ChunkPos eChunkPos = new ChunkPos(e.blockPosition());
+                                if (chunks.contains(eChunkPos)) {
+                                    iterator.remove();
+                                }
+                            }
+                        }
+
+                        chunks.clear();
+                        player.sendSystemMessage(Component.literal("All frozen chunks reloaded!"));
+                    }
+                    return 1;
+                }));
     }
 
-
+    // ---------------- Nuke Spawn ----------------
     public static void spawnTNTNuke(ServerPlayer player) {
-        ServerLevel world = (ServerLevel) player.level;
+        ServerLevel world = (ServerLevel) player.level();
+        Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
-        Vec3 eyePos = player.getEyePosition(1.0f);
-        Vec3 targetPos = eyePos.add(lookVec.scale(100));
-        BlockHitResult hitResult = world.clip(new ClipContext(eyePos, targetPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 hitLocation = hitResult.getLocation();
+        Vec3 end = eyePos.add(lookVec.scale(100.0));
 
-        int rings = 2;
-        int numTNT = 2000; // Number of TNT per ring
-        double radius = 55.0; // Base radius of each ring
-        double tntHeightOffset = 65.0; // Starting height of the first ring
+        BlockHitResult hitResult = world.clip(new ClipContext(
+                eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
+        ));
+        Vec3 hitLocation = hitResult != null ? hitResult.getLocation() : end;
 
-        // Loop through the number of rings (layers stacked on top of each other)
-        for (int ring = 0; ring < rings; ring++) {
-            double currentHeightOffset = tntHeightOffset + (ring * 1.0); // Increment height for each new ring
+        nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
+        player.teleportTo(world, player.getX(), player.getY() + 200, player.getZ(), player.getYRot(), player.getXRot());
 
-            for (int i = 0; i < numTNT; i++) {
-                double angle = 2 * Math.PI * i / numTNT;
-                double xOffset = radius * Math.cos(angle);
-                double zOffset = radius * Math.sin(angle);
-                double tntX = hitLocation.x + xOffset;
-                double tntZ = hitLocation.z + zOffset;
-                double tntY = hitLocation.y + currentHeightOffset;
+        int totalTNT = 2000;
+        double baseY = hitLocation.y;
 
-                PrimedTnt tnt = EntityType.TNT.create(world);
-                if (tnt != null) {
-                    tnt.setPos(tntX, tntY, tntZ);
-                    tnt.setFuse(150); // Set fuse to 250 ticks (12.5 seconds)
-                    world.addFreshEntity(tnt);
-                }
+        for (int i = 0; i < totalTNT; i++) {
+            PrimedTnt tnt = EntityType.TNT.create(world);
+            if (tnt != null) {
+                tnt.setPos(hitLocation.x, baseY + i * 0.001, hitLocation.z);
+                tnt.setFuse(30 + world.random.nextInt(20));
+                world.addFreshEntity(tnt);
+
+                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
             }
         }
+
+        ChunkPos chunkPos = new ChunkPos((int)hitLocation.x >> 4, (int)hitLocation.z >> 4);
+        pausedChunks.computeIfAbsent(world, k -> new HashSet<>()).add(chunkPos);
+
+        player.sendSystemMessage(Component.literal("All TNT packed! You are teleported, chunk frozen."));
+    }
+
+    // ---------------- Derender TNT safely ----------------
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.LevelTickEvent event) {
+        if (event.phase == TickEvent.Phase.START) return;
+        if (!(event.level instanceof ServerLevel world)) return;
+
+        Set<ChunkPos> frozen = pausedChunks.get(world);
+        if (frozen == null || frozen.isEmpty()) return;
+
+        Set<Entity> entities = nukeSpawnedEntities.get(world);
+        if (entities == null || entities.isEmpty()) return;
+
+        Iterator<Entity> iterator = entities.iterator();
+        int processedPerTick = 100; // adjustable for server performance
+        int count = 0;
+
+        while (iterator.hasNext() && count < processedPerTick) {
+            Entity e = iterator.next();
+            ChunkPos chunkPos = new ChunkPos(e.blockPosition());
+            if (frozen.contains(chunkPos)) {
+                e.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                iterator.remove();
+                count++;
+            }
+        }
+
+        // Clean up empty maps
+        if (entities.isEmpty()) nukeSpawnedEntities.remove(world);
+        if (frozen.isEmpty()) pausedChunks.remove(world);
     }
 }

@@ -1,23 +1,12 @@
-buildscript {
-    repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:5.1.+'
-    }
-}
-
 plugins {
+    id 'net.minecraftforge.gradle' version '5.1.+'
     id 'java'
     id 'maven-publish'
 }
 
-apply plugin: 'net.minecraftforge.gradle'
-
 group = 'com.palorder.smp.java'
 version = '2.0'
-archivesBaseName = 'PalorderSMP'
+archivesBaseName = 'PalorderSMP-tweaked'
 
 java {
     toolchain {
@@ -26,26 +15,40 @@ java {
 }
 
 // ======================================================
-// Minecraft Forge settings
+// Minecraft Forge settings (ForgeGradle 5 syntax)
 // ======================================================
 minecraft {
-    mappings channel: 'official', version: '1.18.2'
+    mappings channel: 'official', version: '1.20.1'
 
     runs {
         client {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+
             mods {
                 palordersmp {
                     source sourceSets.main
                 }
             }
         }
+
         server {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+
+            mods {
+                palordersmp {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        data {
+            workingDirectory project.file('run')
+            args '--mod', 'palordersmp', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+
             mods {
                 palordersmp {
                     source sourceSets.main
@@ -56,52 +59,44 @@ minecraft {
 }
 
 // ======================================================
-// Choose which Forge version to compile against here
+// Repositories
 // ======================================================
-ext.supportedVersions = [
-        "1.18.2-40.1.0",
-        "1.20.1-47.1.3"
-]
-
-// Default build target (change this line to switch)
-def targetForgeVersion = supportedVersions[0] // [0] for 1.18.2, [1] for 1.20.1
-
 repositories {
+    maven { url = "https://maven.minecraftforge.net" }
     mavenCentral()
-    maven { url = "https://maven.minecraftforge.net/" }
-    maven { url = "https://libraries.minecraft.net/" }
 }
 
+// ======================================================
+// Dependencies
+// ======================================================
 dependencies {
-    minecraft "net.minecraftforge:forge:${targetForgeVersion}"
+    minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.compilerArgs.add('--add-opens=java.base/java.lang=ALL-UNNAMED')
 }
 
 // ======================================================
 // Jar Packaging
 // ======================================================
 jar {
-    from("src/main/resources") {
-        include "META-INF/mods.toml"
-    }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     manifest {
-        attributes(
-                "Specification-Title": "PalorderSMP",
+        attributes([
+                "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "1.0",
-                "Implementation-Title": "${project.name}",
-                "Implementation-Version": "${project.version}",
+                "Specification-Version": version,
+                "Implementation-Title": project.name,
+                "Implementation-Version": version,
                 "Implementation-Vendor": "PalorderSoftWorks",
-                "Automatic-Module-Name": "${project.name.toLowerCase()}"
-        )
+                "Automatic-Module-Name": project.name.toLowerCase()
+        ])
     }
 }
 
+// Forge reobfuscation
 jar.finalizedBy('reobfJar')
 
 // ======================================================

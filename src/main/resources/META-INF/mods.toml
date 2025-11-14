@@ -1,30 +1,38 @@
 modLoader="javafml"
-loaderVersion="[40,)"
+loaderVersion="[47,)"  # Accepts any loader version 47 or higher
 license="All rights reserved"
 issueTrackerURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP/issues"
 
 [[mods]]
-modId = "palordersmp"
+modId="palordersmp-tweaked"
 version="${file.jarVersion}"
-displayName="PalorderSMP"
+displayName="PalorderSMP-Tweaked"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
-logoFile="LongLiveTheEmpire.png"
-credits="Thanks to Forge for making this mod possible."
-authors="Main Programmer: Maneewan Van Breugel; Special Thanks: Michaël van de Giessen aka tubbynl"
-description='''Palorder SMP Server Mod.
-A project by a beginner programmer that adds a fucking nuke.
+credits="Created by PalorderSoftWorksOfficial"
+authors="PalorderSoftWorksOfficial,SquidDev"
+description='''
+PalorderSMP-Tweaked is a powerful server-side modification created by PalorderSoftWorksOfficial.
+It enhances server management and gameplay features while maintaining full compatibility with Minecraft 1.20.1.
+Future updates will include integration with popular mods like ComputerCraft to expand automation and scripting capabilities.
+Designed for stability, performance, and ease of use, this mod is ideal for both small and large server environments.
 '''
 
-[[dependencies.palordersmp]]
+[[dependencies.palordersmp-tweaked]]
 modId="forge"
 mandatory=true
-versionRange="[40.1.0,)"
+versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.palordersmp]]
+[[dependencies.palordersmp-tweaked]]
 modId="minecraft"
 mandatory=true
-versionRange="[1.20.1)"
+versionRange="[1.20.1,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.palordersmp-tweaked]]
+modId="computercraft"
+mandatory=false
+versionRange="[1.20.1,)"
 ordering="NONE"
 side="BOTH"
