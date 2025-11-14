@@ -31,6 +31,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.fml.ModList;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -102,7 +103,7 @@ public class PalorderSMPMainJava {
     public static void onServerStopping(ServerStoppingEvent event) {
         scheduler.shutdown();
     }
-
+    
     // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("orbital")
