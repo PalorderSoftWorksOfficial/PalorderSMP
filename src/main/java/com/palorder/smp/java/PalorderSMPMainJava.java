@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -104,7 +105,7 @@ public class PalorderSMPMainJava {
 
     // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("InitiateNukeProtocol")
+        dispatcher.register(Commands.literal("orbital")
                 .requires(source -> {
                     try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
                     catch (Exception e) { throw new RuntimeException(e); }
@@ -112,16 +113,16 @@ public class PalorderSMPMainJava {
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     if (nukePendingConfirmation.contains(player.getGameProfile().getId())) {
-                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /confirmNukeInitiation"));
+                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                     } else {
                         nukePendingConfirmation.add(player.getGameProfile().getId());
-                        player.sendSystemMessage(Component.literal("Type /confirmNukeInitiation to spawn 2000 TNT packed in one block."));
+                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
                         scheduler.schedule(() -> nukePendingConfirmation.remove(player.getGameProfile().getId()), 30, TimeUnit.SECONDS);
                     }
                     return 1;
                 }));
 
-        dispatcher.register(Commands.literal("confirmNukeInitiation")
+        dispatcher.register(Commands.literal("orbitalConfirm")
                 .requires(source -> {
                     try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
                     catch (Exception e) { throw new RuntimeException(e); }
@@ -131,7 +132,7 @@ public class PalorderSMPMainJava {
                     if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
                         spawnTNTNuke(player);
                     } else {
-                        player.sendSystemMessage(Component.literal("No pending nuke initiation"));
+                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
                     }
                     return 1;
                 }));
@@ -147,6 +148,7 @@ public class PalorderSMPMainJava {
                         for (ChunkPos pos : chunks) {
                             world.getChunk(pos.x, pos.z);
                             world.getChunkSource().getChunk(pos.x, pos.z, net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
+
                         }
 
                         Set<Entity> entities = nukeSpawnedEntities.get(world);
