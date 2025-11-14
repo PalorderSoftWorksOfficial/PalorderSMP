@@ -4,9 +4,9 @@ license="All rights reserved"
 issueTrackerURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP/issues"
 
 [[mods]]
-modId="palordersmp-tweaked"
+modId="palordersmp_tweaked"
 version="${file.jarVersion}"
-displayName="PalorderSMP-Tweaked"
+displayName="PalorderSMP tweaked"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
 credits="Created by PalorderSoftWorksOfficial"
 authors="PalorderSoftWorksOfficial,SquidDev"
@@ -17,20 +17,20 @@ Future updates will include integration with popular mods like ComputerCraft to 
 Designed for stability, performance, and ease of use, this mod is ideal for both small and large server environments.
 '''
 
-[[dependencies.palordersmp-tweaked]]
+[[dependencies.palordersmp_tweaked]]
 modId="forge"
 mandatory=true
 versionRange="[47,)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.palordersmp-tweaked]]
+[[dependencies.palordersmp_tweaked]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.20.1,)"
 ordering="NONE"
 side="BOTH"
-[[dependencies.palordersmp-tweaked]]
+[[dependencies.palordersmp_tweaked]]
 modId="computercraft"
 mandatory=false
 versionRange="[1.116.1]"
