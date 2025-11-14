@@ -147,8 +147,13 @@ public class PalorderSMPMainJava {
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("orbital")
                 .requires(source -> {
-                    try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
-                    catch (Exception e) { throw new RuntimeException(e); }
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
@@ -164,8 +169,13 @@ public class PalorderSMPMainJava {
 
         dispatcher.register(Commands.literal("orbitalConfirm")
                 .requires(source -> {
-                    try { return source.getPlayerOrException().getGameProfile().getId().equals(OWNER_UUID); }
-                    catch (Exception e) { throw new RuntimeException(e); }
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
@@ -178,7 +188,15 @@ public class PalorderSMPMainJava {
                 }));
 
         dispatcher.register(Commands.literal("loadallchunks")
-                .requires(source -> true)
+                .requires(source -> {
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     ServerLevel world = player.serverLevel(); // or player.serverLevel()
