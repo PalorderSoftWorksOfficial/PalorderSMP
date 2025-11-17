@@ -260,7 +260,7 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Nuke Spawn ----------------
         fun spawnTNTNuke(player: ServerPlayer, tnts: Int?) {
-            val world = player.level as ServerLevel
+            val world = player.level() as ServerLevel
 
             val eyePos: Vec3 = player.getEyePosition(1.0f)
             val lookVec: Vec3 = player.getLookAngle()
