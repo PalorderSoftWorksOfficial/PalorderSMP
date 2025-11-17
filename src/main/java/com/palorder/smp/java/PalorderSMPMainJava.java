@@ -241,38 +241,68 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Nuke Spawn ----------------
-    public static void spawnTNTNuke(ServerPlayer player,int tnts) {
+    public static void spawnTNTNuke(ServerPlayer player, Integer tnts) {
         ServerLevel world = (ServerLevel) player.level();
+
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
         Vec3 end = eyePos.add(lookVec.scale(100.0));
-
         BlockHitResult hitResult = world.clip(new ClipContext(
                 eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
         ));
-        Vec3 hitLocation = hitResult != null ? hitResult.getLocation() : end;
+        Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
-        player.teleportTo(world, player.getX(), player.getY() + 30, player.getZ(), player.getYRot(), player.getXRot());
 
-        int totalTNT = tnts > 0 ? tnts : 100;
-        double baseY = hitLocation.y;
+        double spawnHeight = targetPos.y + 30; // 30 blocks above target
+        int layers = 5;              // vertical layers
+        double layerStepY = 1.0;     // height difference between layers
+        double spacing = 1.5;        // spacing between TNT in blocks
+        Random rand = new Random();
 
-        for (int i = 0; i < totalTNT; i++) {
-            PrimedTnt tnt = EntityType.TNT.create(world);
-            if (tnt != null) {
-                tnt.setPos(hitLocation.x, baseY + i * 0.001, hitLocation.z);
-                tnt.setFuse(30 + world.random.nextInt(20));
-                world.addFreshEntity(tnt);
+        int totalTNT = (tnts != null && tnts > 0) ? tnts : 300;
 
-                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+        // Teleport player 2 chunks away
+        int playerChunkX = (int) player.getX() >> 4;
+        int playerChunkZ = (int) player.getZ() >> 4;
+        double tpX = (playerChunkX + 2) * 16 + 8;
+        double tpZ = (playerChunkZ + 2) * 16 + 8;
+        player.teleportTo(world, tpX, player.getY(), tpZ, player.getYRot(), player.getXRot());
+
+        // Freeze strike chunk if player was inside it
+        ChunkPos strikeChunk = new ChunkPos((int) targetPos.x >> 4, (int) targetPos.z >> 4);
+        if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
+            pausedChunks.computeIfAbsent(world, k -> new HashSet<>()).add(strikeChunk);
+        }
+
+        int spawned = 0;
+
+        // Spawn TNT rings per layer immediately
+        for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
+            double y = spawnHeight + layer * layerStepY;
+
+            for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
+                double radius = ring * 3.0;
+                int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
+
+                for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+                    double angle = 2 * Math.PI * i / tntInRing;
+                    double x = targetPos.x + Math.cos(angle) * radius;
+                    double z = targetPos.z + Math.sin(angle) * radius;
+
+                    PrimedTnt tnt = EntityType.TNT.create(world);
+                    if (tnt != null) {
+                        tnt.setPos(x, y, z);
+                        tnt.setFuse(30 + rand.nextInt(20));
+                        world.addFreshEntity(tnt);
+                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                        spawned++;
+                    }
+                }
             }
         }
 
-        ChunkPos chunkPos = new ChunkPos((int)hitLocation.x >> 4, (int)hitLocation.z >> 4);
-        pausedChunks.computeIfAbsent(world, k -> new HashSet<>()).add(chunkPos);
-
-        player.sendSystemMessage(Component.literal("All TNT packed! You are teleported, chunk frozen."));
+        player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: " + totalTNT));
     }
 
     // ---------------- Derender TNT safely ----------------

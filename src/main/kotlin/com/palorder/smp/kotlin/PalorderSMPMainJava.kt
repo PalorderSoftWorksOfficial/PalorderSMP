@@ -19,6 +19,7 @@ import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.chunk.ChunkStatus
+import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
@@ -39,6 +40,9 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 // Core entry point
 // :contentReference[oaicite:1]{index=1}
@@ -255,40 +259,72 @@ class PalorderSMPMainKotlin {
         }
 
         // ---------------- Nuke Spawn ----------------
-        fun spawnTNTNuke(player: ServerPlayer, tnts: Int) {
-            val world = player.level() as ServerLevel
-            val eyePos = player.getEyePosition(1.0f)
-            val lookVec = player.lookAngle
-            val end = eyePos.add(lookVec.scale(100.0))
+        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?) {
+            val world = player.level as ServerLevel
 
-            val hitResult = world.clip(
-                ClipContext(
-                    eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
-                )
+            val eyePos: Vec3 = player.getEyePosition(1.0f)
+            val lookVec: Vec3 = player.getLookAngle()
+            val end: Vec3 = eyePos.add(lookVec.scale(100.0))
+
+            val hitResult: BlockHitResult? = world.clip(
+                ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)
             )
-            val hitLocation = if (hitResult != null) hitResult.location else end
+            val targetPos: Vec3 = hitResult?.location ?: end
 
-            nukePlayerTeleportBack[player.gameProfile.id] = player.position()
-            player.teleportTo(world, player.x, player.y + 30, player.z, player.yRot, player.xRot)
+            nukePlayerTeleportBack.put(player.gameProfile.id, player.position())
 
-            val totalTNT = if (tnts > 0) tnts else 100
-            val baseY = hitLocation.y
+            val spawnHeight = targetPos.y + 30.0 // 30 blocks above target
+            val layers = 5
+            val layerStepY = 1.0
+            val spacing = 1.5
+            val rand = Random()
 
-            for (i in 0..<totalTNT) {
-                val tnt = EntityType.TNT.create(world)
-                if (tnt != null) {
-                    tnt.setPos(hitLocation.x, baseY + i * 0.001, hitLocation.z)
-                    tnt.fuse = 30 + world.random.nextInt(20)
-                    world.addFreshEntity(tnt)
+            val totalTNT = if (tnts != null && tnts > 0) tnts else 300
 
-                    nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet() }.add(tnt)
+            // Teleport player 2 chunks away
+            val playerChunkX = player.x.toInt() shr 4
+            val playerChunkZ = player.z.toInt() shr 4
+            val tpX = (playerChunkX + 2) * 16 + 8.0
+            val tpZ = (playerChunkZ + 2) * 16 + 8.0
+            player.teleportTo(world, tpX, player.y, tpZ, player.yRot, player.xRot)
+
+            // Freeze strike chunk if player was inside it
+            val strikeChunk = ChunkPos(targetPos.x.toInt() shr 4, targetPos.z.toInt() shr 4)
+            if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
+                pausedChunks.computeIfAbsent(world) { HashSet() }.add(strikeChunk)
+            }
+
+            var spawned = 0
+
+            // Spawn TNT rings per layer immediately
+            for (layer in 0 until layers) {
+                if (spawned >= totalTNT) break
+                val y = spawnHeight + layer * layerStepY
+
+                for (ring in 1..5) {
+                    if (spawned >= totalTNT) break
+                    val radius = ring * 3.0
+                    val tntInRing = (2 * Math.PI * radius / spacing).toInt()
+
+                    for (i in 0 until tntInRing) {
+                        if (spawned >= totalTNT) break
+                        val angle = 2 * Math.PI * i / tntInRing
+                        val x = targetPos.x + cos(angle) * radius
+                        val z = targetPos.z + sin(angle) * radius
+
+                        val tnt = EntityType.TNT.create(world)
+                        if (tnt != null) {
+                            tnt.setPos(x, y, z)
+                            tnt.fuse = 30 + rand.nextInt(20)
+                            world.addFreshEntity(tnt)
+                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                            spawned++
+                        }
+                    }
                 }
             }
 
-            val chunkPos = ChunkPos(hitLocation.x.toInt() shr 4, hitLocation.z.toInt() shr 4)
-            pausedChunks.computeIfAbsent(world) { k: ServerLevel? -> HashSet() }.add(chunkPos)
-
-            player.sendSystemMessage(Component.literal("All TNT packed! You are teleported, chunk frozen."))
+            player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: $totalTNT"))
         }
 
         // ---------------- Derender TNT safely ----------------

@@ -1,4 +1,4 @@
-# PalorderSMP Mod
+# PalorderSMP-tweaked
 
 PalorderSMP-Tweaked is an open-source server-side mod created by PalorderSoftWorksOfficial. Feel free to contact me if you want new features added (but nothing too intense 😉).
 
@@ -26,7 +26,7 @@ Run the `gradlew.bat` file. Wait until you see one of these messages on the last
 Once the build completes:  
 1. Look in the **project root directory**.  
 2. Open the `build` folder, then the `libs` folder inside it.  
-3. Inside, you’ll find the generated `.jar` file ready to use with **Forge 1.18.2+**.
+3. Inside, you’ll find the generated `.jar` file ready to use with **Forge 1.20.1+**.
 
 ## Reporting Issues
 If you encounter problems or bugs, report them here: [PalorderSMP Issues Page](https://github.com/PalorderSoftWorksOfficial/PalorderSMP/issues)
