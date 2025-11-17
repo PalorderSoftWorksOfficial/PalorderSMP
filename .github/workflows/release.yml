@@ -1,6 +1,7 @@
 # .github/workflows/build-and-release.yml
 name: Build and Release Minecraft Mod
-
+permissions:
+  contents: write
 on:
   push:
     branches:
