@@ -2,6 +2,7 @@ package com.palorder.smp.java;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
@@ -76,6 +77,8 @@ import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[
 // Detail providers & registries (for item/block detail exposed to computers)
 import dan200.computercraft.api.detail.DetailProvider;
 import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Mod("palordersmp_tweaked")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -93,7 +96,7 @@ public class PalorderSMPMainJava {
     @Deprecated(forRemoval = true, since = "rewritten")
     public static final RegistryObject<SoundEvent> REVENGE_SOUND_EVENT =
             SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp_tweaked", "revenge")));
-
+    public static final Logger logger = LogManager.getLogger(PalorderSMPMainJava.class);
     // ---------------- Server / Scheduler ----------------
     public static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
     public static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
@@ -107,17 +110,22 @@ public class PalorderSMPMainJava {
 
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
+    private static final Logger log = LogManager.getLogger(PalorderSMPMainJava.class);
+
     static {
         chatItemRewards.put("gimme natherite blocks ples", new ItemStack(Items.NETHERITE_BLOCK, 64));
         chatItemRewards.put("i need food ples give me food 2 stacks ples", new ItemStack(Items.GOLDEN_CARROT, 128));
         chatItemRewards.put("gimme natherite blocks ples adn i want 2 stacks ples", new ItemStack(Items.NETHERITE_BLOCK, 128));
         chatItemRewards.put("i need food ples give me food ples", new ItemStack(Items.GOLDEN_CARROT, 64));
     }
+    public @interface hello {
+
+    }
     public PalorderSMPMainJava() {
         // Register mod event buses for items and sounds
         ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
         SOUND_EVENTS.register(FMLJavaModLoadingContext.get().getModEventBus());
-
+        MinecraftForge.initialize();
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -186,14 +194,44 @@ public class PalorderSMPMainJava {
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, tntCount);
-                            else player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                            return 10;
+
+                            String type = "nuke";
+
+                            if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
+                                spawnTNTNuke(player, tntCount, type);
+                            else
+                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
+
+                            return 1;
                         })
+
+                        .then(Commands.argument("type", StringArgumentType.string())
+                                .suggests((ctx, builder) -> {
+                                    return net.minecraft.commands.SharedSuggestionProvider.suggest(
+                                            List.of("nuke", "stab"), builder);
+                                })
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    int tntCount = IntegerArgumentType.getInteger(context, "amount");
+                                    String type = StringArgumentType.getString(context, "type");
+
+                                    // Validate type
+                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) {
+                                        type = "nuke"; // fallback
+                                    }
+
+                                    if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
+                                        spawnTNTNuke(player, tntCount, type);
+                                    else
+                                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
+
+                                    return 1;
+                                })
+                        )
                 )
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, 1);
+                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, 1,null);
                     else player.sendSystemMessage(Component.literal("No pending orbital strike"));
                     return 1;
                 })
@@ -241,12 +279,12 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Nuke Spawn ----------------
-    public static void spawnTNTNuke(ServerPlayer player, Integer tnts) {
+    public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type) {
         ServerLevel world = (ServerLevel) player.level();
 
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
-        Vec3 end = eyePos.add(lookVec.scale(100.0));
+        Vec3 end = eyePos.add(lookVec.scale(100000.0));
         BlockHitResult hitResult = world.clip(new ClipContext(
                 eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
         ));
@@ -254,22 +292,20 @@ public class PalorderSMPMainJava {
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
 
-        double spawnHeight = targetPos.y + 30; // 30 blocks above target
-        int layers = 5;              // vertical layers
-        double layerStepY = 1.0;     // height difference between layers
-        double spacing = 1.5;        // spacing between TNT in blocks
+        double spawnHeight = targetPos.y + 30;
+        int layers = 5;
+        double layerStepY = 1.0;
+        double spacing = 1.5;
         Random rand = new Random();
 
         int totalTNT = (tnts != null && tnts > 0) ? tnts : 300;
 
-        // Teleport player 2 chunks away
         int playerChunkX = (int) player.getX() >> 4;
         int playerChunkZ = (int) player.getZ() >> 4;
         double tpX = (playerChunkX + 2) * 16 + 8;
         double tpZ = (playerChunkZ + 2) * 16 + 8;
         player.teleportTo(world, tpX, player.getY(), tpZ, player.getYRot(), player.getXRot());
 
-        // Freeze strike chunk if player was inside it
         ChunkPos strikeChunk = new ChunkPos((int) targetPos.x >> 4, (int) targetPos.z >> 4);
         if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
             pausedChunks.computeIfAbsent(world, k -> new HashSet<>()).add(strikeChunk);
@@ -277,32 +313,47 @@ public class PalorderSMPMainJava {
 
         int spawned = 0;
 
-        // Spawn TNT rings per layer immediately
-        for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
-            double y = spawnHeight + layer * layerStepY;
+        if (type.equals("stab")) {
+            for (int i = 0; i < totalTNT; i++) {
+                PrimedTnt tnt = EntityType.TNT.create(world);
+                if (tnt != null) {
+                    tnt.setPos(targetPos.x, player.getY(), targetPos.z);
+                    tnt.setFuse(60 + rand.nextInt(20));
+                    world.addFreshEntity(tnt);
+                    nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                }
+            }
+        } else if (type.equals("nuke")) {
+            for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
+                double y = spawnHeight + layer * layerStepY;
 
-            for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
-                double radius = ring * 3.0;
-                int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
+                for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
+                    double radius = ring * 3.0;
+                    int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
 
-                for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
-                    double angle = 2 * Math.PI * i / tntInRing;
-                    double x = targetPos.x + Math.cos(angle) * radius;
-                    double z = targetPos.z + Math.sin(angle) * radius;
+                    for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+                        double angle = 2 * Math.PI * i / tntInRing;
+                        double x = targetPos.x + Math.cos(angle) * radius;
+                        double z = targetPos.z + Math.sin(angle) * radius;
 
-                    PrimedTnt tnt = EntityType.TNT.create(world);
-                    if (tnt != null) {
-                        tnt.setPos(x, y, z);
-                        tnt.setFuse(60 + rand.nextInt(20));
-                        world.addFreshEntity(tnt);
-                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
-                        spawned++;
+                        PrimedTnt tnt = EntityType.TNT.create(world);
+                        if (tnt != null) {
+                            tnt.setPos(x, y, z);
+                            tnt.setFuse(60 + rand.nextInt(20));
+                            world.addFreshEntity(tnt);
+                            nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                            spawned++;
+                        }
                     }
                 }
             }
+        } else if (type == null) {
+            IllegalArgumentException ex =
+                    new IllegalArgumentException("type cant be nothing, how did you do this.");
+            logger.error("Invalid argument encountered", ex);
         }
 
-        player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: " + totalTNT));
+        player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type));
     }
 
     // ---------------- Derender TNT safely ----------------
