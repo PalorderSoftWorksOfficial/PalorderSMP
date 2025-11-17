@@ -45,17 +45,39 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 // Core entry point
-// :contentReference[oaicite:1]{index=1}
+import dan200.computercraft.api.ComputerCraftAPI  // :contentReference[oaicite:1]{index=1}
+
+
 // Lua‑API interfaces
-// :contentReference[oaicite:2]{index=2}
+import dan200.computercraft.api.lua.ILuaAPI
+import dan200.computercraft.api.lua.ILuaAPIFactory
+import dan200.computercraft.api.lua.ILuaContext
+import dan200.computercraft.api.lua.ILuaFunction
+import dan200.computercraft.api.lua.IArguments
+import dan200.computercraft.api.lua.LuaTable
+import dan200.computercraft.api.lua.LuaValues
+import dan200.computercraft.api.lua.MethodResult  // :contentReference[oaicite:2]{index=2}
+
+
 // Peripheral / Computer interfaces
-// :contentReference[oaicite:3]{index=3}
+import dan200.computercraft.api.peripheral.IPeripheral
+import dan200.computercraft.api.peripheral.IComputerAccess
+import dan200.computercraft.api.peripheral.IDynamicPeripheral  // :contentReference[oaicite:3]{index=3}
+
+
 // Turtle / upgrade interfaces
-// :contentReference[oaicite:4]{index=4}
+import dan200.computercraft.api.turtle.ITurtleUpgrade
+import dan200.computercraft.api.turtle.ITurtleAccess
+import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider  // :contentReference[oaicite:4]{index=4}
+
+
 // Filesystem / mounts
-// :contentReference[oaicite:5]{index=5}
+import dan200.computercraft.api.filesystem.Mount
+import dan200.computercraft.api.filesystem.WritableMount  // :contentReference[oaicite:5]{index=5}
+
 // Detail providers & registries (for item/block detail exposed to computers)
-// :contentReference[oaicite:6]{index=6}
+import dan200.computercraft.api.detail.DetailProvider
+import dan200.computercraft.api.detail.DetailRegistry  // :contentReference[oaicite:6]{index=6}
 @Mod("palordersmp_tweaked")
 @EventBusSubscriber(modid = "palordersmp_tweaked", value = [Dist.DEDICATED_SERVER], bus = EventBusSubscriber.Bus.FORGE)
 class PalorderSMPMainKotlin {
