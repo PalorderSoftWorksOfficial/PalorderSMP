@@ -64,7 +64,7 @@ jobs:
         fi
         echo "commits=$COMMITS" >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release
+    - name: Create GitHub Release and upload JAR
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
@@ -73,8 +73,10 @@ jobs:
         body: |
           ## Commits included in this release
           ${{ steps.commits.outputs.commits }}
+        files: build/libs/*.jar   # <- attach the JAR directly
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
     - name: Upload JAR to Release
       uses: softprops/action-gh-release@v1
