@@ -2,7 +2,7 @@
     "revenge": {
         "sounds": [
             {
-                "name": "palordersmp:revenge",
+                "name": "palordersmp_tweaked:revenge",
                 "stream": true
             }
         ]
@@ -10,7 +10,7 @@
     "destroyerofworlds": {
         "sounds": [
             {
-                "name": "palordersmp:meowphenheimer",
+                "name": "palordersmp_tweaked:meowphenheimer",
                 "stream": true
             }
         ]
@@ -18,7 +18,7 @@
     "dontstop": {
         "sounds": [
             {
-                "name": "palordersmp:dontstop",
+                "name": "palordersmp_tweaked:dontstop",
                 "stream": true
             }
         ]
@@ -26,7 +26,7 @@
     "wildside": {
         "sounds": [
             {
-                "name": "palordersmp:wildside",
+                "name": "palordersmp_tweaked:wildside",
                 "stream": true
             }
         ]
@@ -34,7 +34,7 @@
   "zero": {
     "sounds": [
       {
-        "name": "palordersmp:zero",
+        "name": "palordersmp_tweaked:zero",
         "stream": true
       }
     ]

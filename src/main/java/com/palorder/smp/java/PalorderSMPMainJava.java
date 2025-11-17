@@ -84,13 +84,13 @@ public class PalorderSMPMainJava {
     // ---------------- Deferred Registers ----------------
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp_tweaked");
-
+    @Deprecated(forRemoval = true, since = "rewritten")
     public static final RegistryObject<Item> deathban_revive =
             ITEMS.register("deathban_revive", () -> new Item(new Item.Properties()));
-
+    @Deprecated(forRemoval = true, since = "rewritten")
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
             DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "palordersmp_tweaked");
-
+    @Deprecated(forRemoval = true, since = "rewritten")
     public static final RegistryObject<SoundEvent> REVENGE_SOUND_EVENT =
             SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp_tweaked", "revenge")));
 
@@ -113,7 +113,6 @@ public class PalorderSMPMainJava {
         chatItemRewards.put("gimme natherite blocks ples adn i want 2 stacks ples", new ItemStack(Items.NETHERITE_BLOCK, 128));
         chatItemRewards.put("i need food ples give me food ples", new ItemStack(Items.GOLDEN_CARROT, 64));
     }
-
     public PalorderSMPMainJava() {
         // Register mod event buses for items and sounds
         ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
@@ -123,6 +122,7 @@ public class PalorderSMPMainJava {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
+
     // ---------------- Chat Item Rewards ----------------
     @SubscribeEvent
     public static void handleChatItemRequests(ServerChatEvent event) {
@@ -131,6 +131,7 @@ public class PalorderSMPMainJava {
         if (chatItemRewards.containsKey(message)) {
             player.getInventory().add(chatItemRewards.get(message));
         }
+
     }
 
     // ---------------- Server Events ----------------
