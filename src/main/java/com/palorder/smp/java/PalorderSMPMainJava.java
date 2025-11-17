@@ -95,15 +95,15 @@ public class PalorderSMPMainJava {
             SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp_tweaked", "revenge")));
 
     // ---------------- Server / Scheduler ----------------
-    private static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
-    private static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
-    private static final Set<UUID> nukePendingConfirmation = new HashSet<>();
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    public static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
+    public static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
+    public static final Set<UUID> nukePendingConfirmation = new HashSet<>();
+    public static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     // ---------------- Nuke tracking ----------------
-    private static final Map<UUID, Vec3> nukePlayerTeleportBack = new HashMap<>();
-    private static final Map<ServerLevel, Set<ChunkPos>> pausedChunks = new HashMap<>();
-    private static final Map<ServerLevel, Set<Entity>> nukeSpawnedEntities = new HashMap<>();
+    public static final Map<UUID, Vec3> nukePlayerTeleportBack = new HashMap<>();
+    public static final Map<ServerLevel, Set<ChunkPos>> pausedChunks = new HashMap<>();
+    public static final Map<ServerLevel, Set<Entity>> nukeSpawnedEntities = new HashMap<>();
 
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();

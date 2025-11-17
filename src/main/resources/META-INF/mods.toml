@@ -36,3 +36,9 @@ mandatory=false
 versionRange="[1.116.1]"
 ordering="AFTER"
 side="BOTH"
+[[dependencies.palordersmp_tweaked]]
+modId="kotlinforforge"
+mandatory=true
+versionRange="[1.20.1,)"
+ordering="NONE"
+side="BOTH"
