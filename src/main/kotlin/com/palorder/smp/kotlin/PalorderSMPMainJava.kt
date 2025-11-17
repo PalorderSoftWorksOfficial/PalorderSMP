@@ -315,7 +315,7 @@ class PalorderSMPMainKotlin {
                         val tnt = EntityType.TNT.create(world)
                         if (tnt != null) {
                             tnt.setPos(x, y, z)
-                            tnt.fuse = 30 + rand.nextInt(20)
+                            tnt.fuse = 60 + rand.nextInt(20)
                             world.addFreshEntity(tnt)
                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                             spawned++

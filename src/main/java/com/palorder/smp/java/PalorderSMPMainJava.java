@@ -293,7 +293,7 @@ public class PalorderSMPMainJava {
                     PrimedTnt tnt = EntityType.TNT.create(world);
                     if (tnt != null) {
                         tnt.setPos(x, y, z);
-                        tnt.setFuse(30 + rand.nextInt(20));
+                        tnt.setFuse(60 + rand.nextInt(20));
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                         spawned++;
