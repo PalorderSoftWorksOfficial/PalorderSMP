@@ -1,0 +1,7 @@
+{
+  "type": "computercraft:tool",
+  "item": "netherite_shovel",
+  "adjective": "upgrade.minecraft.diamond_shovel.adjective",
+  "allowEnchantments": true,
+  "consumeDurability": "when_enchanted"
+}

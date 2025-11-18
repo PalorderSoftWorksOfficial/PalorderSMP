@@ -1,0 +1,8 @@
+{
+  "type": "computercraft:tool",
+  "item": "netherite_sword",
+  "adjective": "upgrade.minecraft.diamond_sword.adjective",
+  "damageMultiplier": 9,
+  "allowEnchantments": true,
+  "consumeDurability": "when_enchanted"
+}

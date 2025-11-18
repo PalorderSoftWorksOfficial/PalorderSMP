@@ -1,0 +1,8 @@
+{
+  "type": "computercraft:tool",
+  "item": "stone_axe",
+  "adjective": "upgrade.minecraft.diamond_axe.adjective",
+  "damageMultiplier": 6,
+  "allowEnchantments": false,
+  "consumeDurability": "always"
+}

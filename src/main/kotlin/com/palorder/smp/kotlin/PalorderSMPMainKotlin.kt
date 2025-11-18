@@ -204,20 +204,13 @@ class PalorderSMPMainKotlin {
                                         )
                                     }
                                     .then(
-                                        Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                        Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                             .executes { context: CommandContext<CommandSourceStack> ->
                                                 val player = context.source.playerOrException
                                                 val tntCount = IntegerArgumentType.getInteger(context, "amount")
                                                 var type = StringArgumentType.getString(context, "type")
                                                 val layers = IntegerArgumentType.getInteger(context, "layers")
 
-                                                if (!type.equals("nuke", ignoreCase = true) && !type.equals(
-                                                        "stab",
-                                                        ignoreCase = true
-                                                    )
-                                                ) {
-                                                    type = "nuke"
-                                                }
 
                                                 if (nukePendingConfirmation.remove(player.gameProfile.id)) {
                                                     spawnTNTNuke(player, tntCount, type, layers)

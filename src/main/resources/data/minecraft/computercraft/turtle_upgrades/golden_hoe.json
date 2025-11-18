@@ -1,0 +1,7 @@
+{
+  "type": "computercraft:tool",
+  "item": "golden_hoe",
+  "adjective": "upgrade.minecraft.diamond_hoe.adjective",
+  "allowEnchantments": true,
+  "consumeDurability": "always"
+}

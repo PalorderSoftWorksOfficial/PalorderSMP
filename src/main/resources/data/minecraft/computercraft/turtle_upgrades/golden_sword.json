@@ -1,0 +1,8 @@
+{
+  "type": "computercraft:tool",
+  "item": "golden_sword",
+  "adjective": "upgrade.minecraft.diamond_sword.adjective",
+  "damageMultiplier": 9,
+  "allowEnchantments": true,
+  "consumeDurability": "always"
+}

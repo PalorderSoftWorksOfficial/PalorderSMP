@@ -1,0 +1,7 @@
+{
+  "type": "computercraft:tool",
+  "item": "wooden_shovel",
+  "adjective": "upgrade.minecraft.diamond_shovel.adjective",
+  "allowEnchantments": false,
+  "consumeDurability": "always"
+}

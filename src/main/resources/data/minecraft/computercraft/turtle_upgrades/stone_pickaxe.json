@@ -1,0 +1,7 @@
+{
+  "type": "computercraft:tool",
+  "item": "stone_pickaxe",
+  "adjective": "upgrade.minecraft.diamond_pickaxe.adjective",
+  "allowEnchantments": false,
+  "consumeDurability": "always"
+}

@@ -68,7 +68,6 @@ import dan200.computercraft.api.turtle.ITurtleUpgrade;
 import dan200.computercraft.api.turtle.ITurtleAccess;
 import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider;  // :contentReference[oaicite:4]{index=4}
 
-
 // Filesystem / mounts
 import dan200.computercraft.api.filesystem.Mount;
 import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[oaicite:5]{index=5}
@@ -77,6 +76,7 @@ import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[
 // Detail providers & registries (for item/block detail exposed to computers)
 import dan200.computercraft.api.detail.DetailProvider;
 import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -195,16 +195,12 @@ public class PalorderSMPMainJava {
                         .then(Commands.argument("type", StringArgumentType.string())
                                 .suggests((ctx, builder) ->
                                         net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
-                                .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                         .executes(context -> {
                                             ServerPlayer player = context.getSource().getPlayerOrException();
                                             int tntCount = IntegerArgumentType.getInteger(context, "amount");
                                             String type = StringArgumentType.getString(context, "type");
                                             int layers = IntegerArgumentType.getInteger(context, "layers");
-
-                                            if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) {
-                                                type = "nuke";
-                                            }
 
                                             if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
                                                 spawnTNTNuke(player, tntCount, type, layers);
