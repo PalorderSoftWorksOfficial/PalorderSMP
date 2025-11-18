@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
+import com.palorder.smp.java.PalorderSMPMainJava
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.SharedSuggestionProvider
@@ -111,6 +112,7 @@ class PalorderSMPMainKotlin {
         // ---------------- Server / Scheduler ----------------
         val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")
         val OWNER_UUID2: UUID = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686")
+        val DEV_UUID: UUID = PalorderSMPMainJava.DEV_UUID
         val nukePendingConfirmation: MutableSet<UUID> = HashSet()
         val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
@@ -159,10 +161,7 @@ class PalorderSMPMainKotlin {
                         try {
                             val player = source.playerOrException
                             return@requires player.gameProfile.id == OWNER_UUID
-                                    || "dev".equals(
-                                player.name.string,
-                                ignoreCase = true
-                            ) || player.gameProfile.id == OWNER_UUID2
+                                    || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -189,7 +188,7 @@ class PalorderSMPMainKotlin {
                             val player = source.playerOrException
                             return@requires player.gameProfile.id == OWNER_UUID
                                     || player.gameProfile.id == OWNER_UUID2
-                                    || "dev".equals(player.name.string, ignoreCase = true)
+                                    || player.gameProfile.id == DEV_UUID
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -259,10 +258,7 @@ class PalorderSMPMainKotlin {
                         try {
                             val player = source.playerOrException
                             return@requires player.gameProfile.id == OWNER_UUID
-                                    || "dev".equals(
-                                player.name.string,
-                                ignoreCase = true
-                            ) || player.gameProfile.id == OWNER_UUID2
+                                    || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
