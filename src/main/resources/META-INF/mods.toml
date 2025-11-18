@@ -38,7 +38,7 @@ ordering="AFTER"
 side="BOTH"
 [[dependencies.palordersmp_tweaked]]
 modId="kotlinforforge"
-mandatory=true
+mandatory=false
 versionRange="[4.3.0,)"
 ordering="NONE"
 side="BOTH"
