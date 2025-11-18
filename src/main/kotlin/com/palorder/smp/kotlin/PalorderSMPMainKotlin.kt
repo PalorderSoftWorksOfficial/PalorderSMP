@@ -2,10 +2,12 @@ package com.palorder.smp.kotlin
 
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
-import com.palorder.smp.java.PalorderSMPMainJava
+import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
+import net.minecraft.commands.SharedSuggestionProvider
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
@@ -19,7 +21,6 @@ import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.chunk.ChunkStatus
-import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
@@ -36,56 +37,38 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.*
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 
 // Core entry point
-import dan200.computercraft.api.ComputerCraftAPI  // :contentReference[oaicite:1]{index=1}
-
-
+// :contentReference[oaicite:1]{index=1}
 // Lua‑API interfaces
-import dan200.computercraft.api.lua.ILuaAPI
-import dan200.computercraft.api.lua.ILuaAPIFactory
-import dan200.computercraft.api.lua.ILuaContext
-import dan200.computercraft.api.lua.ILuaFunction
-import dan200.computercraft.api.lua.IArguments
-import dan200.computercraft.api.lua.LuaTable
-import dan200.computercraft.api.lua.LuaValues
-import dan200.computercraft.api.lua.MethodResult  // :contentReference[oaicite:2]{index=2}
-
-
+// :contentReference[oaicite:2]{index=2}
 // Peripheral / Computer interfaces
-import dan200.computercraft.api.peripheral.IPeripheral
-import dan200.computercraft.api.peripheral.IComputerAccess
-import dan200.computercraft.api.peripheral.IDynamicPeripheral  // :contentReference[oaicite:3]{index=3}
-
-
+// :contentReference[oaicite:3]{index=3}
 // Turtle / upgrade interfaces
-import dan200.computercraft.api.turtle.ITurtleUpgrade
-import dan200.computercraft.api.turtle.ITurtleAccess
-import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider  // :contentReference[oaicite:4]{index=4}
-
-
+// :contentReference[oaicite:4]{index=4}
 // Filesystem / mounts
-import dan200.computercraft.api.filesystem.Mount
-import dan200.computercraft.api.filesystem.WritableMount  // :contentReference[oaicite:5]{index=5}
-
+// :contentReference[oaicite:5]{index=5}
 // Detail providers & registries (for item/block detail exposed to computers)
-import dan200.computercraft.api.detail.DetailProvider
-import dan200.computercraft.api.detail.DetailRegistry  // :contentReference[oaicite:6]{index=6}
+// :contentReference[oaicite:6]{index=6}
 @Mod("palordersmp_tweaked")
 @EventBusSubscriber(modid = "palordersmp_tweaked", value = [Dist.DEDICATED_SERVER], bus = EventBusSubscriber.Bus.FORGE)
 class PalorderSMPMainKotlin {
+    annotation class hello
+
     init {
         // Register mod event buses for items and sounds
         ITEMS.register(FMLJavaModLoadingContext.get().modEventBus)
         SOUND_EVENTS.register(FMLJavaModLoadingContext.get().modEventBus)
-
+        MinecraftForge.initialize()
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this)
     }
@@ -123,20 +106,24 @@ class PalorderSMPMainKotlin {
                 )
             )
         }
+        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java)
 
         // ---------------- Server / Scheduler ----------------
-        private val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")
-        private val OWNER_UUID2: UUID = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686")
-        private val nukePendingConfirmation: MutableSet<UUID> = HashSet()
-        private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+        val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")
+        val OWNER_UUID2: UUID = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686")
+        val nukePendingConfirmation: MutableSet<UUID> = HashSet()
+        val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
         // ---------------- Nuke tracking ----------------
-        private val nukePlayerTeleportBack: MutableMap<UUID, Vec3> = HashMap()
-        private val pausedChunks: MutableMap<ServerLevel, MutableSet<ChunkPos>> = HashMap()
-        private val nukeSpawnedEntities: MutableMap<ServerLevel, MutableSet<Entity>> = HashMap()
+        val nukePlayerTeleportBack: MutableMap<UUID, Vec3> = HashMap()
+        val pausedChunks: MutableMap<ServerLevel, MutableSet<ChunkPos>> = HashMap()
+        val nukeSpawnedEntities: MutableMap<ServerLevel, MutableSet<Entity>> = HashMap()
 
         // ---------------- Chat rewards ----------------
         private val chatItemRewards: MutableMap<String, ItemStack> = HashMap()
+        private val log: Logger = LogManager.getLogger(
+            PalorderSMPMainKotlin::class.java
+        )
 
         init {
             chatItemRewards["gimme natherite blocks ples"] =
@@ -155,7 +142,7 @@ class PalorderSMPMainKotlin {
             val message = event.message.string
             val player = event.player
             if (chatItemRewards.containsKey(message)) {
-                chatItemRewards[message]?.let { player.inventory.add(it) }
+                player.inventory.add(chatItemRewards[message])
             }
         }
 
@@ -208,25 +195,60 @@ class PalorderSMPMainKotlin {
                         }
                     }
                     .then(
-                        Commands.argument("amount", IntegerArgumentType.integer(10))
+                        Commands.argument("amount", IntegerArgumentType.integer(0))
+                            .then(
+                                Commands.argument("type", StringArgumentType.string())
+                                    .suggests { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
+                                        SharedSuggestionProvider.suggest(
+                                            listOf("nuke", "stab"),
+                                            builder
+                                        )
+                                    }
+                                    .then(
+                                        Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                            .executes { context: CommandContext<CommandSourceStack> ->
+                                                val player = context.source.playerOrException
+                                                val tntCount = IntegerArgumentType.getInteger(context, "amount")
+                                                var type = StringArgumentType.getString(context, "type")
+                                                val layers = IntegerArgumentType.getInteger(context, "layers")
+
+                                                if (!type.equals("nuke", ignoreCase = true) && !type.equals(
+                                                        "stab",
+                                                        ignoreCase = true
+                                                    )
+                                                ) {
+                                                    type = "nuke"
+                                                }
+
+                                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
+                                                    spawnTNTNuke(player, tntCount, type, layers)
+                                                } else {
+                                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
+                                                }
+                                                1
+                                            }
+                                    )
+                            )
                             .executes { context: CommandContext<CommandSourceStack> ->
+                                // Fallback if only amount is provided
                                 val player = context.source.playerOrException
                                 val tntCount = IntegerArgumentType.getInteger(context, "amount")
-                                if (nukePendingConfirmation.remove(player.gameProfile.id)) spawnTNTNuke(
-                                    player,
-                                    tntCount
-                                )
-                                else player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                                10
+                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
+                                    spawnTNTNuke(player, tntCount, "nuke", 5)
+                                } else {
+                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
+                                }
+                                1
                             }
                     )
                     .executes { context: CommandContext<CommandSourceStack> ->
+                        // Fallback if no arguments
                         val player = context.source.playerOrException
-                        if (nukePendingConfirmation.remove(player.gameProfile.id)) spawnTNTNuke(
-                            player,
-                            1
-                        )
-                        else player.sendSystemMessage(Component.literal("No pending orbital strike"))
+                        if (nukePendingConfirmation.remove(player.gameProfile.id)) {
+                            spawnTNTNuke(player, 1, "nuke", 5)
+                        } else {
+                            player.sendSystemMessage(Component.literal("No pending orbital strike"))
+                        }
                         1
                     }
             )
@@ -281,72 +303,94 @@ class PalorderSMPMainKotlin {
         }
 
         // ---------------- Nuke Spawn ----------------
-        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?) {
+        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String, layers: Int) {
             val world = player.level() as ServerLevel
 
-            val eyePos: Vec3 = player.getEyePosition(1.0f)
-            val lookVec: Vec3 = player.getLookAngle()
-            val end: Vec3 = eyePos.add(lookVec.scale(100.0))
-
-            val hitResult: BlockHitResult? = world.clip(
-                ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)
+            val eyePos = player.getEyePosition(1.0f)
+            val lookVec = player.lookAngle
+            val end = eyePos.add(lookVec.scale(100000.0))
+            val hitResult = world.clip(
+                ClipContext(
+                    eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
+                )
             )
-            val targetPos: Vec3 = hitResult?.location ?: end
+            val targetPos = if (hitResult != null) hitResult.location else end
 
-            nukePlayerTeleportBack.put(player.gameProfile.id, player.position())
+            nukePlayerTeleportBack[player.gameProfile.id] = player.position()
 
-            val spawnHeight = targetPos.y + 30.0 // 30 blocks above target
-            val layers = 5
+            val spawnHeight = targetPos.y + 30
             val layerStepY = 1.0
             val spacing = 1.5
             val rand = Random()
 
             val totalTNT = if (tnts != null && tnts > 0) tnts else 300
 
-            // Teleport player 2 chunks away
             val playerChunkX = player.x.toInt() shr 4
             val playerChunkZ = player.z.toInt() shr 4
-            val tpX = (playerChunkX + 2) * 16 + 8.0
-            val tpZ = (playerChunkZ + 2) * 16 + 8.0
+            val tpX = ((playerChunkX + 2) * 16 + 8).toDouble()
+            val tpZ = ((playerChunkZ + 2) * 16 + 8).toDouble()
             player.teleportTo(world, tpX, player.y, tpZ, player.yRot, player.xRot)
 
-            // Freeze strike chunk if player was inside it
             val strikeChunk = ChunkPos(targetPos.x.toInt() shr 4, targetPos.z.toInt() shr 4)
             if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
-                pausedChunks.computeIfAbsent(world) { HashSet() }.add(strikeChunk)
+                pausedChunks.computeIfAbsent(world) { k: ServerLevel? -> HashSet() }.add(strikeChunk)
             }
 
             var spawned = 0
 
-            // Spawn TNT rings per layer immediately
-            for (layer in 0 until layers) {
-                if (spawned >= totalTNT) break
-                val y = spawnHeight + layer * layerStepY
-
-                for (ring in 1..5) {
-                    if (spawned >= totalTNT) break
-                    val radius = ring * 3.0
-                    val tntInRing = (2 * Math.PI * radius / spacing).toInt()
-
-                    for (i in 0 until tntInRing) {
-                        if (spawned >= totalTNT) break
-                        val angle = 2 * Math.PI * i / tntInRing
-                        val x = targetPos.x + cos(angle) * radius
-                        val z = targetPos.z + sin(angle) * radius
-
-                        val tnt = EntityType.TNT.create(world)
-                        if (tnt != null) {
-                            tnt.setPos(x, y, z)
-                            tnt.fuse = 60 + rand.nextInt(20)
-                            world.addFreshEntity(tnt)
-                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
-                            spawned++
-                        }
+            if (type == "stab") {
+                for (i in 0..<totalTNT) {
+                    val tnt = EntityType.TNT.create(world)
+                    if (tnt != null) {
+                        tnt.setPos(targetPos.x, player.y, targetPos.z)
+                        tnt.fuse = 60 + rand.nextInt(20)
+                        world.addFreshEntity(tnt)
+                        nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet() }.add(tnt)
                     }
                 }
+            } else if (type == "nuke") {
+                var layer = 0
+                while (layer < layers && spawned < totalTNT) {
+                    val y = spawnHeight + layer * layerStepY
+
+                    var ring = 1
+                    while (spawned < totalTNT && ring <= 5) {
+                        // PATCH: radius now increases with layer too
+                        val radius = ring * 3.0 * (layer + 1)
+
+                        val tntInRing = floor((2 * Math.PI * radius) / spacing).toInt()
+
+                        var i = 0
+                        while (i < tntInRing && spawned < totalTNT) {
+                            val angle = 2 * Math.PI * i / tntInRing
+                            val x = targetPos.x + cos(angle) * radius
+                            val z = targetPos.z + sin(angle) * radius
+
+                            val tnt = EntityType.TNT.create(world)
+                            if (tnt != null) {
+                                tnt.setPos(x, y, z)
+                                tnt.fuse = 60 + rand.nextInt(20)
+                                world.addFreshEntity(tnt)
+                                nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet() }.add(tnt)
+                                spawned++
+                            }
+                            i++
+                        }
+                        ring++
+                    }
+                    layer++
+                }
+            } else if (type == null) {
+                val ex =
+                    IllegalArgumentException("type cant be nothing, how did you do this.")
+                logger.error("Invalid argument encountered", ex)
             }
 
-            player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: $totalTNT"))
+            player.sendSystemMessage(
+                Component.literal(
+                    "Orbital strike launched! Total TNT: $totalTNT, Type: $type"
+                )
+            )
         }
 
         // ---------------- Derender TNT safely ----------------
@@ -355,10 +399,10 @@ class PalorderSMPMainKotlin {
             if (event.phase == TickEvent.Phase.START) return
             if (event.level !is ServerLevel) return
 
-            val frozen = PalorderSMPMainJava.pausedChunks[event.level]
+            val frozen: Set<ChunkPos>? = pausedChunks[event.level]
             if (frozen == null || frozen.isEmpty()) return
 
-            val entities = PalorderSMPMainJava.nukeSpawnedEntities[event.level]
+            val entities = nukeSpawnedEntities[event.level]
             if (entities == null || entities.isEmpty()) return
 
             val iterator = entities.iterator()
@@ -376,8 +420,8 @@ class PalorderSMPMainKotlin {
             }
 
             // Clean up empty maps
-            if (entities.isEmpty()) PalorderSMPMainJava.nukeSpawnedEntities.remove(event.level)
-            if (frozen.isEmpty()) PalorderSMPMainJava.pausedChunks.remove(event.level)
+            if (entities.isEmpty()) nukeSpawnedEntities.remove(event.level)
+            if (frozen.isEmpty()) pausedChunks.remove(event.level)
         }
     }
 }

@@ -190,49 +190,51 @@ public class PalorderSMPMainJava {
                         throw new RuntimeException(e);
                     }
                 })
-                .then(Commands.argument("amount", IntegerArgumentType.integer(10))
+                .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                        .then(Commands.argument("type", StringArgumentType.string())
+                                .suggests((ctx, builder) ->
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
+                                .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                        .executes(context -> {
+                                            ServerPlayer player = context.getSource().getPlayerOrException();
+                                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
+                                            String type = StringArgumentType.getString(context, "type");
+                                            int layers = IntegerArgumentType.getInteger(context, "layers");
+
+                                            if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) {
+                                                type = "nuke";
+                                            }
+
+                                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
+                                                spawnTNTNuke(player, tntCount, type, layers);
+                                            } else {
+                                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                                            }
+
+                                            return 1;
+                                        })
+                                )
+                        )
                         .executes(context -> {
+                            // Fallback if only amount is provided
                             ServerPlayer player = context.getSource().getPlayerOrException();
                             int tntCount = IntegerArgumentType.getInteger(context, "amount");
-
-                            String type = "nuke";
-
-                            if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
-                                spawnTNTNuke(player, tntCount, type);
-                            else
+                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
+                                spawnTNTNuke(player, tntCount, "nuke", 5);
+                            } else {
                                 player.sendSystemMessage(Component.literal("No pending orbital strike"));
-
+                            }
                             return 1;
                         })
-
-                        .then(Commands.argument("type", StringArgumentType.string())
-                                .suggests((ctx, builder) -> {
-                                    return net.minecraft.commands.SharedSuggestionProvider.suggest(
-                                            List.of("nuke", "stab"), builder);
-                                })
-                                .executes(context -> {
-                                    ServerPlayer player = context.getSource().getPlayerOrException();
-                                    int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                                    String type = StringArgumentType.getString(context, "type");
-
-                                    // Validate type
-                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) {
-                                        type = "nuke"; // fallback
-                                    }
-
-                                    if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
-                                        spawnTNTNuke(player, tntCount, type);
-                                    else
-                                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
-
-                                    return 1;
-                                })
-                        )
                 )
                 .executes(context -> {
+                    // Fallback if no arguments
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) spawnTNTNuke(player, 1,null);
-                    else player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
+                        spawnTNTNuke(player, 1, "nuke", 5);
+                    } else {
+                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                    }
                     return 1;
                 })
         );
@@ -279,7 +281,7 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Nuke Spawn ----------------
-    public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type) {
+    public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type, Integer layers) {
         ServerLevel world = (ServerLevel) player.level();
 
         Vec3 eyePos = player.getEyePosition(1.0F);
@@ -293,7 +295,6 @@ public class PalorderSMPMainJava {
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
 
         double spawnHeight = targetPos.y + 30;
-        int layers = 5;
         double layerStepY = 1.0;
         double spacing = 1.5;
         Random rand = new Random();
@@ -314,6 +315,7 @@ public class PalorderSMPMainJava {
         int spawned = 0;
 
         if (type.equals("stab")) {
+
             for (int i = 0; i < totalTNT; i++) {
                 PrimedTnt tnt = EntityType.TNT.create(world);
                 if (tnt != null) {
@@ -323,15 +325,22 @@ public class PalorderSMPMainJava {
                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                 }
             }
+
         } else if (type.equals("nuke")) {
+
             for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
+
                 double y = spawnHeight + layer * layerStepY;
 
                 for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
-                    double radius = ring * 3.0;
+
+                    // PATCH: radius now increases with layer too
+                    double radius = ring * 3.0 * (layer + 1);
+
                     int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
 
                     for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+
                         double angle = 2 * Math.PI * i / tntInRing;
                         double x = targetPos.x + Math.cos(angle) * radius;
                         double z = targetPos.z + Math.sin(angle) * radius;
@@ -347,13 +356,17 @@ public class PalorderSMPMainJava {
                     }
                 }
             }
+
         } else if (type == null) {
+
             IllegalArgumentException ex =
                     new IllegalArgumentException("type cant be nothing, how did you do this.");
             logger.error("Invalid argument encountered", ex);
         }
 
-        player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type));
+        player.sendSystemMessage(Component.literal(
+                "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type
+        ));
     }
 
     // ---------------- Derender TNT safely ----------------
