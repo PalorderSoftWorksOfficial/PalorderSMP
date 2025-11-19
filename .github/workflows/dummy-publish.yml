@@ -1,0 +1,36 @@
+name: Dummy Maven Publish
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Create dummy JAR
+        run: |
+          mkdir -p dummy
+          echo "dummy file" > dummy/README.txt
+          jar cf dummy.jar -C dummy .
+
+      - name: Publish dummy JAR to GitHub Packages
+        run: |
+          mkdir -p build/libs
+          mv dummy.jar build/libs/
+          ./gradlew publish || echo "Expected failure to activate Packages"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
