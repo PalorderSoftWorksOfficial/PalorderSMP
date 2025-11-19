@@ -133,7 +133,7 @@ publishing {
             url = uri("https://maven.pkg.github.com/PalorderSoftWorksOfficial/PalorderSMP")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("PAT")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
