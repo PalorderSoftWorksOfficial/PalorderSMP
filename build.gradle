@@ -7,7 +7,7 @@ plugins {
 
 group = 'com.palorder.smp.java'
 version = '2.0'
-archivesBaseName = 'PalorderSMP-tweaked'
+archivesBaseName = 'palordersmp-tweaked'
 
 java {
     toolchain {
@@ -116,12 +116,15 @@ jar {
 jar.finalizedBy('reobfJar')
 
 // ======================================================
-// Publishing (optional local maven repo)
+// Publishing
 // ======================================================
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifact jar
+            groupId = 'com.palorder.smp.java'
+            artifactId = 'palordersmp-tweaked'
+            version = '2.0'
+		artifact jar
         }
     }
     repositories {
@@ -130,7 +133,7 @@ publishing {
             url = uri("https://maven.pkg.github.com/PalorderSoftWorksOfficial/PalorderSMP")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
-                password = "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"
+                password = System.getenv("PAT")
             }
         }
     }
