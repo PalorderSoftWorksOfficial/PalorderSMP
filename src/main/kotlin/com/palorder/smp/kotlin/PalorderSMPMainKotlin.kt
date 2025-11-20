@@ -1,14 +1,13 @@
 package com.palorder.smp.kotlin
 
+import com.electronwill.nightconfig.core.file.FileConfig
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.palorder.smp.java.PalorderSMPMainJava
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
-import net.minecraft.commands.SharedSuggestionProvider
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
@@ -40,6 +39,8 @@ import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -74,12 +75,98 @@ class PalorderSMPMainKotlin {
         MinecraftForge.EVENT_BUS.register(this)
     }
 
+    @Throws(java.lang.Exception::class)
+    private fun findWorldFolder(serverDir: Path): Optional<Path> {
+        return Files.list(serverDir)
+            .filter { path: Path -> Files.isDirectory(path) }
+            .filter { p: Path -> Files.exists(p.resolve("level.dat")) }
+            .findFirst()
+    }
 
+    @Throws(java.lang.Exception::class)
+    private fun injectmodsconfigcctweaked(serverDir: Path) {
+        val worldFolder = findWorldFolder(serverDir)
+        if (worldFolder.isEmpty) return
+
+        val configPath = worldFolder.get().resolve("serverconfig/computercraft-server.toml")
+        if (!Files.exists(configPath)) return
+
+        FileConfig.of(configPath).use { config ->
+            config.load()
+            config.set<Any?>("computer_space_limit", 1073741824)
+            config.set<Any?>("floppy_space_limit", 1073741824)
+            config.set<Any?>("upload_max_size", 524288)
+            config.set<Any?>("maximum_open_files", 128)
+            config.set<Any?>("default_computer_settings", "")
+            config.set<Any?>("log_computer_errors", true)
+            config.set<Any?>("command_require_creative", true)
+            config.set<Any?>("disabled_generic_methods", mutableListOf<Any?>())
+
+            config.set<Any?>("execution.computer_threads", 1)
+            config.set<Any?>("execution.max_main_global_time", 10)
+            config.set<Any?>("execution.max_main_computer_time", 5)
+
+            config.set<Any?>("http.enabled", true)
+            config.set<Any?>("http.websocket_enabled", true)
+            config.set<Any?>("http.max_requests", 100)
+            config.set<Any?>("http.max_websockets", 100)
+            config.set<Any?>("http.bandwidth.global_download", 1073741824)
+            config.set<Any?>("http.bandwidth.global_upload", 1073741824)
+            config.set<Any?>("http.proxy.type", "HTTP")
+            config.set<Any?>("http.proxy.host", "")
+            config.set<Any?>("http.proxy.port", 8080)
+
+            val rule1 = mapOf("host" to "private", "action" to "deny")
+            val rule2 = mapOf(
+                "host" to "*",
+                "action" to "allow",
+                "max_download" to 16777216,
+                "max_upload" to 4194304,
+                "max_websocket_message" to 131072,
+                "use_proxy" to false
+            )
+            config.set<Any?>("http.rules", listOf(rule1, rule2))
+
+            config.set<Any?>("peripheral.command_block_enabled", true)
+            config.set<Any?>("peripheral.modem_range", 64)
+            config.set<Any?>("peripheral.modem_high_altitude_range", 384)
+            config.set<Any?>("peripheral.modem_range_during_storm", 64)
+            config.set<Any?>("peripheral.modem_high_altitude_range_during_storm", 384)
+            config.set<Any?>("peripheral.max_notes_per_tick", 8)
+            config.set<Any?>("peripheral.monitor_bandwidth", 1_000_000)
+
+            config.set<Any?>("turtle.need_fuel", true)
+            config.set<Any?>("turtle.normal_fuel_limit", 20_000)
+            config.set<Any?>("turtle.advanced_fuel_limit", 100_000)
+            config.set<Any?>("turtle.can_push", true)
+
+            config.set<Any?>("term_sizes.computer.width", 51)
+            config.set<Any?>("term_sizes.computer.height", 19)
+
+            config.set<Any?>("term_sizes.pocket_computer.width", 26)
+            config.set<Any?>("term_sizes.pocket_computer.height", 20)
+
+            config.set<Any?>("term_sizes.monitor.width", 8)
+            config.set<Any?>("term_sizes.monitor.height", 6)
+
+            config.save()
+        }
+    }
     // ---------------- Server Events ----------------
     @SubscribeEvent
     fun onServerStarting(event: ServerStartingEvent) {
         registerCommands(event.server.commands.dispatcher)
+
+        val server = event.server
         if (ModList.get().isLoaded("computercraft")) {
+            try {
+                injectmodsconfigcctweaked(server.serverDirectory.toPath())
+            } catch (e: Exception) {
+                PalorderSMPMainJava.logger.fatal(
+                    "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
+                    e
+                )
+            }
         }
     }
 

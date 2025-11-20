@@ -9,6 +9,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -37,6 +38,11 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.fml.ModList;
 
+import com.electronwill.nightconfig.core.Config;
+import com.electronwill.nightconfig.core.file.FileConfig;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -130,7 +136,87 @@ public class PalorderSMPMainJava {
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
     }
+    private Optional<Path> findWorldFolder(Path serverDir) throws Exception {
+        return Files.list(serverDir)
+                .filter(Files::isDirectory)
+                .filter(p -> Files.exists(p.resolve("level.dat")))
+                .findFirst();
+    }
 
+    private void injectmodsconfigcctweaked(Path serverDir) throws Exception {
+        Optional<Path> worldFolder = findWorldFolder(serverDir);
+        if (worldFolder.isEmpty()) return;
+
+        Path configPath = worldFolder.get().resolve("serverconfig/computercraft-server.toml");
+        if (!Files.exists(configPath)) return;
+
+        try (FileConfig config = FileConfig.of(configPath)) {
+            config.load();
+            config.set("computer_space_limit", 1073741824);
+            config.set("floppy_space_limit", 1073741824);
+            config.set("upload_max_size", 524288);
+            config.set("maximum_open_files", 128);
+            config.set("default_computer_settings", "");
+            config.set("log_computer_errors", true);
+            config.set("command_require_creative", true);
+            config.set("disabled_generic_methods", new ArrayList<>());
+
+            config.set("execution.computer_threads", 1);
+            config.set("execution.max_main_global_time", 10);
+            config.set("execution.max_main_computer_time", 5);
+
+            config.set("http.enabled", true);
+            config.set("http.websocket_enabled", true);
+            config.set("http.max_requests", 100);
+            config.set("http.max_websockets", 100);
+            config.set("http.bandwidth.global_download", 1073741824);
+            config.set("http.bandwidth.global_upload", 1073741824);
+            config.set("http.proxy.type", "HTTP");
+            config.set("http.proxy.host", "");
+            config.set("http.proxy.port", 8080);
+
+            List<Object> httpRules = new ArrayList<>();
+            Map<String, Object> rule1 = new HashMap<>();
+            rule1.put("host", "$private");
+            rule1.put("action", "deny");
+            httpRules.add(rule1);
+
+            Map<String, Object> rule2 = new HashMap<>();
+            rule2.put("host", "*");
+            rule2.put("action", "allow");
+            rule2.put("max_download", 16777216);
+            rule2.put("max_upload", 4194304);
+            rule2.put("max_websocket_message", 131072);
+            rule2.put("use_proxy", false);
+            httpRules.add(rule2);
+
+            config.set("http.rules", httpRules);
+
+            config.set("peripheral.command_block_enabled", true);
+            config.set("peripheral.modem_range", 64);
+            config.set("peripheral.modem_high_altitude_range", 384);
+            config.set("peripheral.modem_range_during_storm", 64);
+            config.set("peripheral.modem_high_altitude_range_during_storm", 384);
+            config.set("peripheral.max_notes_per_tick", 8);
+            config.set("peripheral.monitor_bandwidth", 1000000);
+
+            config.set("turtle.need_fuel", true);
+            config.set("turtle.normal_fuel_limit", 20000);
+            config.set("turtle.advanced_fuel_limit", 100000);
+            config.set("turtle.can_push", true);
+
+            config.set("term_sizes.computer.width", 51);
+            config.set("term_sizes.computer.height", 19);
+
+            config.set("term_sizes.pocket_computer.width", 26);
+            config.set("term_sizes.pocket_computer.height", 20);
+
+            config.set("term_sizes.monitor.width", 8);
+            config.set("term_sizes.monitor.height", 6);
+
+            config.save();
+        }
+    }
 
     // ---------------- Chat Item Rewards ----------------
     @SubscribeEvent
@@ -147,8 +233,13 @@ public class PalorderSMPMainJava {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         registerCommands(event.getServer().getCommands().getDispatcher());
+        MinecraftServer server = event.getServer();
         if (ModList.get().isLoaded("computercraft")) {
-
+            try {
+                injectmodsconfigcctweaked(server.getServerDirectory().toPath());
+            } catch (Exception e) {
+                logger.fatal("Failed to inject configuration into: [computercraft] \n please find a compatible version.",e);
+            }
         }
     }
 
