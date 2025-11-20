@@ -155,103 +155,70 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Commands ----------------
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack?>) {
-            dispatcher.register(
-                Commands.literal("orbital")
-                    .requires { source: CommandSourceStack ->
-                        try {
-                            val player = source.playerOrException
-                            return@requires player.gameProfile.id == OWNER_UUID
-                                    || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
-                        } catch (e: Exception) {
-                            throw RuntimeException(e)
-                        }
+            dispatcher.register(Commands.literal("orbital")
+                .requires { source: CommandSourceStack ->
+                    try {
+                        val player = source.playerOrException
+                        return@requires player.gameProfile.id == OWNER_UUID
+                                || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
                     }
-                    .executes { context: CommandContext<CommandSourceStack> ->
-                        val player = context.source.playerOrException
-                        if (nukePendingConfirmation.contains(player.gameProfile.id)) {
+                }
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .executes { context ->
+                        val player = context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target")) ?: return@executes 0
+                        val playerId = player.gameProfile.id
+                        if (!(playerId == OWNER_UUID || playerId == DEV_UUID || playerId == OWNER_UUID2)) return@executes 0
+                        if (nukePendingConfirmation.contains(playerId)) {
                             player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
                         } else {
-                            nukePendingConfirmation.add(player.gameProfile.id)
+                            nukePendingConfirmation.add(playerId)
                             player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."))
-                            scheduler.schedule<Boolean>({
-                                nukePendingConfirmation.remove(
-                                    player.gameProfile.id
-                                )
-                            }, 30, TimeUnit.SECONDS)
+                            scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                         }
                         1
                     })
-            dispatcher.register(
-                Commands.literal("orbitalConfirm")
-                    .requires { source: CommandSourceStack ->
-                        try {
-                            val player = source.playerOrException
-                            return@requires player.gameProfile.id == OWNER_UUID
-                                    || player.gameProfile.id == OWNER_UUID2
-                                    || player.gameProfile.id == DEV_UUID
-                        } catch (e: Exception) {
-                            throw RuntimeException(e)
-                        }
+                .executes { context ->
+                    val player = context.source.playerOrException
+                    val playerId = player.gameProfile.id
+                    if (nukePendingConfirmation.contains(playerId)) {
+                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
+                    } else {
+                        nukePendingConfirmation.add(playerId)
+                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."))
+                        scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                     }
-                    .then(
-                        Commands.argument("amount", IntegerArgumentType.integer(0))
-                            .then(
-                                Commands.argument("type", StringArgumentType.string())
-                                    .suggests { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
-                                        SharedSuggestionProvider.suggest(
-                                            listOf("nuke", "stab"),
-                                            builder
-                                        )
-                                    }
-                                    .then(
-                                        Commands.argument("layers", IntegerArgumentType.integer(1, 50))
-                                            .executes { context: CommandContext<CommandSourceStack> ->
-                                                val player = context.source.playerOrException
-                                                val tntCount = IntegerArgumentType.getInteger(context, "amount")
-                                                var type = StringArgumentType.getString(context, "type")
-                                                val layers = IntegerArgumentType.getInteger(context, "layers")
-
-                                                if (!type.equals("nuke", ignoreCase = true) && !type.equals(
-                                                        "stab",
-                                                        ignoreCase = true
-                                                    )
-                                                ) {
-                                                    type = "nuke"
-                                                }
-
-                                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                                                    spawnTNTNuke(player, tntCount, type, layers)
-                                                } else {
-                                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                                                }
-                                                1
-                                            }
-                                    )
-                            )
-                            .executes { context: CommandContext<CommandSourceStack> ->
-                                // Fallback if only amount is provided
-                                val player = context.source.playerOrException
-                                val tntCount = IntegerArgumentType.getInteger(context, "amount")
-                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                                    spawnTNTNuke(player, tntCount, "nuke", 5)
-                                } else {
-                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                                }
-                                1
-                            }
-                    )
-                    .executes { context: CommandContext<CommandSourceStack> ->
-                        // Fallback if no arguments
-                        val player = context.source.playerOrException
-                        if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                            spawnTNTNuke(player, 1, "nuke", 5)
-                        } else {
-                            player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                        }
-                        1
-                    }
+                    1
+                }
             )
 
+            dispatcher.register(Commands.literal("orbitalConfirm")
+                .requires { source: CommandSourceStack ->
+                    try {
+                        val player = source.playerOrException
+                        return@requires player.gameProfile.id == OWNER_UUID
+                                || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
+                    }
+                }
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                        .then(Commands.argument("type", StringArgumentType.string())
+                            .suggests { _, builder ->
+                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab"), builder)
+                            }
+                            .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                .executes { context ->
+                                    val player = context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target")) ?: return@executes 0
+                                    val tntCount = IntegerArgumentType.getInteger(context, "amount")
+                                    var type = StringArgumentType.getString(context, "type")
+                                    val layers = IntegerArgumentType.getInteger(context, "layers")
+                                    if (!type.equals("nuke", true) && !type.equals("stab", true)) type = "nuke"
+                                    if (nukePendingConfirmation.remove(player.gameProfile.id)) spawnTNTNuke(player, tntCount, type, layers)
+                                    1
+                                })))))
             dispatcher.register(
                 Commands.literal("loadallchunks")
                     .requires { source: CommandSourceStack ->

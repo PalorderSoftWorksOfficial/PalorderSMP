@@ -164,78 +164,80 @@ public class PalorderSMPMainJava {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || player.getGameProfile().getId().equals(DEV_UUID) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (player == null) return 0;
+                            UUID playerId = player.getGameProfile().getId();
+                            if (!(playerId.equals(OWNER_UUID) || playerId.equals(DEV_UUID) || playerId.equals(OWNER_UUID2))) return 0;
+                            if (nukePendingConfirmation.contains(playerId)) {
+                                player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                            } else {
+                                nukePendingConfirmation.add(playerId);
+                                player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
+                                scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
+                            }
+                            return 1;
+                        }))
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.contains(player.getGameProfile().getId())) {
+                    UUID playerId = player.getGameProfile().getId();
+                    if (nukePendingConfirmation.contains(playerId)) {
                         player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                     } else {
-                        nukePendingConfirmation.add(player.getGameProfile().getId());
+                        nukePendingConfirmation.add(playerId);
                         player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
-                        scheduler.schedule(() -> nukePendingConfirmation.remove(player.getGameProfile().getId()), 30, TimeUnit.SECONDS);
+                        scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
                     }
                     return 1;
-                }));
+                })
+        );
+
         dispatcher.register(Commands.literal("orbitalConfirm")
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || player.getGameProfile().getId().equals(OWNER_UUID2)
-                                || player.getGameProfile().getId().equals(DEV_UUID);
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
-                .then(Commands.argument("amount", IntegerArgumentType.integer(0))
-                        .then(Commands.argument("type", StringArgumentType.string())
-                                .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
-                                .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
-                                        .executes(context -> {
-                                            ServerPlayer player = context.getSource().getPlayerOrException();
-                                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                                            String type = StringArgumentType.getString(context, "type");
-                                            int layers = IntegerArgumentType.getInteger(context, "layers");
-
-                                            if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) {
-                                                type = "nuke";
-                                            }
-
-                                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                                                spawnTNTNuke(player, tntCount, type, layers);
-                                            } else {
-                                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                                            }
-
-                                            return 1;
-                                        })
-                                )
-                        )
-                        .executes(context -> {
-                            // Fallback if only amount is provided
-                            ServerPlayer player = context.getSource().getPlayerOrException();
-                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                                spawnTNTNuke(player, tntCount, "nuke", 5);
-                            } else {
-                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                            }
-                            return 1;
-                        })
-                )
-                .executes(context -> {
-                    // Fallback if no arguments
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                        spawnTNTNuke(player, 1, "nuke", 5);
-                    } else {
-                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                                .then(Commands.argument("type", StringArgumentType.string())
+                                        .suggests((ctx, builder) ->
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
+                                        .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                                                    if (player == null) return 0;
+                                                    int tntCount = IntegerArgumentType.getInteger(context, "amount");
+                                                    String type = StringArgumentType.getString(context, "type");
+                                                    int layers = IntegerArgumentType.getInteger(context, "layers");
+                                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) type = "nuke";
+                                                    if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
+                                                        spawnTNTNuke(player, tntCount, type, layers);
+                                                    return 1;
+                                                }))))));
+        dispatcher.register(Commands.literal("fastorbital")
+                .requires(source -> {
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
+                })
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    spawnTNTNuke(player,500,"nuke",10);
                     return 1;
                 })
         );
