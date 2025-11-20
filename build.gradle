@@ -112,9 +112,6 @@ jar {
     }
 }
 
-// Forge reobfuscation
-jar.finalizedBy('reobfJar')
-
 // ======================================================
 // Publishing
 // ======================================================
@@ -125,7 +122,6 @@ publishing {
             artifactId = 'palordersmp-tweaked'
             version = '2.0'
 
-            artifact tasks.reobfJar
         }
     }
 
