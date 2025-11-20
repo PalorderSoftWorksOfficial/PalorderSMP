@@ -103,9 +103,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": version,
+                "Specification-Version": 3.0,
                 "Implementation-Title": project.name,
-                "Implementation-Version": version,
+                "Implementation-Version": 3.0,
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
@@ -120,7 +120,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
-            version = '2.0'
+            version = '3.0'
 
         }
     }

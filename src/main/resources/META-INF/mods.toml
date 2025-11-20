@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP/issues
 
 [[mods]]
 modId="palordersmp_tweaked"
-version="${file.jarVersion}"
+version="3.0"
 displayName="PalorderSMP tweaked"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
 credits="Created by PalorderSoftWorksOfficial"
