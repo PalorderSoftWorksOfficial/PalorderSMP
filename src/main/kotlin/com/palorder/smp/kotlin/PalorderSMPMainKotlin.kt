@@ -152,13 +152,17 @@ class PalorderSMPMainKotlin {
 
         val server = event.server
         if (ModList.get().isLoaded("computercraft")) {
-            try {
-                injectModsConfigCC(server)
-            } catch (e: Exception) {
-                PalorderSMPMainJava.logger.warn(
-                    "Failed to inject configuration into: [computercraft] \n please find a compatible version."
-                )
-            }
+            // Run config injection asynchronously to prevent server hang
+            Thread {
+                try {
+                    injectModsConfigCC(server)
+                } catch (e: Exception) {
+                    PalorderSMPMainJava.logger.warn(
+                        "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
+                        e
+                    )
+                }
+            }.start()
         }
     }
 

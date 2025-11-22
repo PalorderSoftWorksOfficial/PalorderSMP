@@ -230,13 +230,18 @@ public class PalorderSMPMainJava {
     public void onServerStarting(ServerStartingEvent event) {
         registerCommands(event.getServer().getCommands().getDispatcher());
         MinecraftServer server = event.getServer();
+
         if (ModList.get().isLoaded("computercraft")) {
-            try {
-                injectModsConfigCC(server);
-            } catch (Exception e) {
-                logger.warn("Failed to inject configuration into: [computercraft] \n please find a compatible version.");
-                e.printStackTrace();
-            }
+            new Thread(() -> {
+                try {
+                    injectModsConfigCC(server);
+                } catch (Exception e) {
+                    logger.warn(
+                            "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
+                            e
+                    );
+                }
+            }).start();
         }
     }
 
