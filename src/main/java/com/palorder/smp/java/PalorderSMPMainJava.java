@@ -129,10 +129,6 @@ public class PalorderSMPMainJava {
 
     }
     public PalorderSMPMainJava() {
-        // Register mod event buses for items and sounds
-        ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
-        SOUND_EVENTS.register(FMLJavaModLoadingContext.get().getModEventBus());
-        MinecraftForge.initialize();
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
     }
