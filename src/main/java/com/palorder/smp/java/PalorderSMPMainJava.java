@@ -238,7 +238,7 @@ public class PalorderSMPMainJava {
             try {
                 injectmodsconfigcctweaked(server.getServerDirectory().toPath());
             } catch (Exception e) {
-                logger.fatal("Failed to inject configuration into: [computercraft] \n please find a compatible version.",e);
+                logger.warn("Failed to inject configuration into: [computercraft] \n please find a compatible version.");
             }
         }
     }

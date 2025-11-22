@@ -162,9 +162,8 @@ class PalorderSMPMainKotlin {
             try {
                 injectmodsconfigcctweaked(server.serverDirectory.toPath())
             } catch (e: Exception) {
-                PalorderSMPMainJava.logger.fatal(
-                    "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
-                    e
+                PalorderSMPMainJava.logger.warn(
+                    "Failed to inject configuration into: [computercraft] \n please find a compatible version."
                 )
             }
         }
