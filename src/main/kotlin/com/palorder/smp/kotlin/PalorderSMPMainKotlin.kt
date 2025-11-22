@@ -67,10 +67,6 @@ class PalorderSMPMainKotlin {
     annotation class hello
 
     init {
-        // Register mod event buses for items and sounds
-        ITEMS.register(FMLJavaModLoadingContext.get().modEventBus)
-        SOUND_EVENTS.register(FMLJavaModLoadingContext.get().modEventBus)
-        MinecraftForge.initialize()
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this)
     }
