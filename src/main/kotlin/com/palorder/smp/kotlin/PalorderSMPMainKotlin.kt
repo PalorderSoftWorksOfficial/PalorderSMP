@@ -29,10 +29,10 @@ import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.event.TickEvent.LevelTickEvent
+import net.minecraftforge.event.TickEvent.ServerTickEvent
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
-import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber
 import net.minecraftforge.registries.DeferredRegister
@@ -41,7 +41,6 @@ import net.minecraftforge.registries.RegistryObject
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -73,7 +72,7 @@ class PalorderSMPMainKotlin {
     }
 
     @Throws(java.lang.Exception::class)
-    private fun injectModsConfigCC(server: MinecraftServer) {
+    public fun injectModsConfigCC(server: MinecraftServer) {
         val worldFolder = server.getWorldPath(LevelResource.ROOT)
 
         val configPath = worldFolder.resolve("serverconfig/computercraft-server.toml")
@@ -149,21 +148,6 @@ class PalorderSMPMainKotlin {
     @SubscribeEvent
     fun onServerStarting(event: ServerStartingEvent) {
         registerCommands(event.server.commands.dispatcher)
-
-        val server = event.server
-        if (ModList.get().isLoaded("computercraft")) {
-            // Run config injection asynchronously to prevent server hang
-            Thread {
-                try {
-                    injectModsConfigCC(server)
-                } catch (e: Exception) {
-                    PalorderSMPMainJava.logger.warn(
-                        "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
-                        e
-                    )
-                }
-            }.start()
-        }
     }
 
     companion object {
@@ -234,6 +218,22 @@ class PalorderSMPMainKotlin {
         @SubscribeEvent
         fun onServerStopping(event: ServerStoppingEvent?) {
             scheduler.shutdown()
+
+        }
+        private var injected = false
+
+        @SubscribeEvent
+        fun onServerTick(event: ServerTickEvent) {
+            if (event.phase == TickEvent.Phase.START && !injected) {
+                injected = true
+                Thread(Runnable {
+                    try {
+                        injectModsConfigCC(event.getServer())
+                    } catch (e: java.lang.Exception) {
+                        logger.warn("Error injecting CC config", e)
+                    }
+                }).start()
+            }
         }
 
         // ---------------- Commands ----------------
@@ -471,3 +471,5 @@ class PalorderSMPMainKotlin {
         }
     }
 }
+
+private fun PalorderSMPMainKotlin.Companion.injectModsConfigCC(server: MinecraftServer) {}

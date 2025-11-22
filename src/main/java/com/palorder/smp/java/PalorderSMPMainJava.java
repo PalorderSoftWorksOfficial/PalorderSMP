@@ -230,21 +230,22 @@ public class PalorderSMPMainJava {
     public void onServerStarting(ServerStartingEvent event) {
         registerCommands(event.getServer().getCommands().getDispatcher());
         MinecraftServer server = event.getServer();
+    }
+    private boolean injected = false;
 
-        if (ModList.get().isLoaded("computercraft")) {
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase == TickEvent.Phase.START && !injected) {
+            injected = true;
             new Thread(() -> {
                 try {
-                    injectModsConfigCC(server);
+                    injectModsConfigCC(event.getServer());
                 } catch (Exception e) {
-                    logger.warn(
-                            "Failed to inject configuration into: [computercraft] \n please find a compatible version.",
-                            e
-                    );
+                    logger.warn("Error injecting CC config", e);
                 }
             }).start();
         }
     }
-
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         scheduler.shutdown();
