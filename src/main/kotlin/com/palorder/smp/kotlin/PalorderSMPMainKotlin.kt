@@ -70,80 +70,6 @@ class PalorderSMPMainKotlin {
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this)
     }
-
-    @Throws(java.lang.Exception::class)
-    public fun injectModsConfigCC(server: MinecraftServer) {
-        val worldFolder = server.getWorldPath(LevelResource.ROOT)
-
-        val configPath = worldFolder.resolve("serverconfig/computercraft-server.toml")
-        if (!Files.exists(configPath)) return
-
-        FileConfig.of(configPath).use { config ->
-            config.load()
-            config.set<Any?>("computer_space_limit", 1073741824)
-            config.set<Any?>("floppy_space_limit", 1073741824)
-            config.set<Any?>("upload_max_size", 524288)
-            config.set<Any?>("maximum_open_files", 128)
-            config.set<Any?>("default_computer_settings", "")
-            config.set<Any?>("log_computer_errors", true)
-            config.set<Any?>("command_require_creative", true)
-            config.set<Any?>("disabled_generic_methods", ArrayList<Any?>())
-
-            config.set<Any?>("execution.computer_threads", 1)
-            config.set<Any?>("execution.max_main_global_time", 10)
-            config.set<Any?>("execution.max_main_computer_time", 5)
-
-            config.set<Any?>("http.enabled", true)
-            config.set<Any?>("http.websocket_enabled", true)
-            config.set<Any?>("http.max_requests", 100)
-            config.set<Any?>("http.max_websockets", 100)
-            config.set<Any?>("http.bandwidth.global_download", 1073741824)
-            config.set<Any?>("http.bandwidth.global_upload", 1073741824)
-            config.set<Any?>("http.proxy.type", "HTTP")
-            config.set<Any?>("http.proxy.host", "")
-            config.set<Any?>("http.proxy.port", 8080)
-
-            val httpRules: MutableList<Any?> = ArrayList<Any?>()
-            val rule1: MutableMap<String?, Any?> = HashMap<String?, Any?>()
-            rule1.put("host", "\$private")
-            rule1.put("action", "deny")
-            httpRules.add(rule1)
-
-            val rule2: MutableMap<String?, Any?> = HashMap<String?, Any?>()
-            rule2.put("host", "*")
-            rule2.put("action", "allow")
-            rule2.put("max_download", 16777216)
-            rule2.put("max_upload", 4194304)
-            rule2.put("max_websocket_message", 131072)
-            rule2.put("use_proxy", false)
-            httpRules.add(rule2)
-
-            config.set<Any?>("http.rules", httpRules)
-
-            config.set<Any?>("peripheral.command_block_enabled", true)
-            config.set<Any?>("peripheral.modem_range", 64)
-            config.set<Any?>("peripheral.modem_high_altitude_range", 384)
-            config.set<Any?>("peripheral.modem_range_during_storm", 64)
-            config.set<Any?>("peripheral.modem_high_altitude_range_during_storm", 384)
-            config.set<Any?>("peripheral.max_notes_per_tick", 8)
-            config.set<Any?>("peripheral.monitor_bandwidth", 1000000)
-
-            config.set<Any?>("turtle.need_fuel", false)
-            config.set<Any?>("turtle.normal_fuel_limit", 20000)
-            config.set<Any?>("turtle.advanced_fuel_limit", 100000)
-            config.set<Any?>("turtle.can_push", true)
-
-            config.set<Any?>("term_sizes.computer.width", 51)
-            config.set<Any?>("term_sizes.computer.height", 19)
-
-            config.set<Any?>("term_sizes.pocket_computer.width", 26)
-            config.set<Any?>("term_sizes.pocket_computer.height", 20)
-
-            config.set<Any?>("term_sizes.monitor.width", 8)
-            config.set<Any?>("term_sizes.monitor.height", 6)
-            config.save()
-        }
-    }
     // ---------------- Server Events ----------------
     @SubscribeEvent
     fun onServerStarting(event: ServerStartingEvent) {
@@ -220,22 +146,6 @@ class PalorderSMPMainKotlin {
             scheduler.shutdown()
 
         }
-        private var injected = false
-
-        @SubscribeEvent
-        fun onServerTick(event: ServerTickEvent) {
-            if (event.phase == TickEvent.Phase.START && !injected) {
-                injected = true
-                Thread(Runnable {
-                    try {
-                        injectModsConfigCC(event.getServer())
-                    } catch (e: java.lang.Exception) {
-                        logger.warn("Error injecting CC config", e)
-                    }
-                }).start()
-            }
-        }
-
         // ---------------- Commands ----------------
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack?>) {
             dispatcher.register(Commands.literal("orbital")
@@ -471,5 +381,3 @@ class PalorderSMPMainKotlin {
         }
     }
 }
-
-private fun PalorderSMPMainKotlin.Companion.injectModsConfigCC(server: MinecraftServer) {}
