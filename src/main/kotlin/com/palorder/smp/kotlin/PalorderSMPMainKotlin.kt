@@ -10,6 +10,7 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
@@ -21,6 +22,7 @@ import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.chunk.ChunkStatus
+import net.minecraft.world.level.storage.LevelResource
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
@@ -33,7 +35,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
@@ -72,19 +73,10 @@ class PalorderSMPMainKotlin {
     }
 
     @Throws(java.lang.Exception::class)
-    private fun findWorldFolder(serverDir: Path): Optional<Path> {
-        return Files.list(serverDir)
-            .filter { path: Path -> Files.isDirectory(path) }
-            .filter { p: Path -> Files.exists(p.resolve("level.dat")) }
-            .findFirst()
-    }
+    private fun injectModsConfigCC(server: MinecraftServer) {
+        val worldFolder = server.getWorldPath(LevelResource.ROOT)
 
-    @Throws(java.lang.Exception::class)
-    private fun injectmodsconfigcctweaked(serverDir: Path) {
-        val worldFolder = findWorldFolder(serverDir)
-        if (worldFolder.isEmpty) return
-
-        val configPath = worldFolder.get().resolve("serverconfig/computercraft-server.toml")
+        val configPath = worldFolder.resolve("serverconfig/computercraft-server.toml")
         if (!Files.exists(configPath)) return
 
         FileConfig.of(configPath).use { config ->
@@ -96,7 +88,7 @@ class PalorderSMPMainKotlin {
             config.set<Any?>("default_computer_settings", "")
             config.set<Any?>("log_computer_errors", true)
             config.set<Any?>("command_require_creative", true)
-            config.set<Any?>("disabled_generic_methods", mutableListOf<Any?>())
+            config.set<Any?>("disabled_generic_methods", ArrayList<Any?>())
 
             config.set<Any?>("execution.computer_threads", 1)
             config.set<Any?>("execution.max_main_global_time", 10)
@@ -112,16 +104,22 @@ class PalorderSMPMainKotlin {
             config.set<Any?>("http.proxy.host", "")
             config.set<Any?>("http.proxy.port", 8080)
 
-            val rule1 = mapOf("host" to "private", "action" to "deny")
-            val rule2 = mapOf(
-                "host" to "*",
-                "action" to "allow",
-                "max_download" to 16777216,
-                "max_upload" to 4194304,
-                "max_websocket_message" to 131072,
-                "use_proxy" to false
-            )
-            config.set<Any?>("http.rules", listOf(rule1, rule2))
+            val httpRules: MutableList<Any?> = ArrayList<Any?>()
+            val rule1: MutableMap<String?, Any?> = HashMap<String?, Any?>()
+            rule1.put("host", "\$private")
+            rule1.put("action", "deny")
+            httpRules.add(rule1)
+
+            val rule2: MutableMap<String?, Any?> = HashMap<String?, Any?>()
+            rule2.put("host", "*")
+            rule2.put("action", "allow")
+            rule2.put("max_download", 16777216)
+            rule2.put("max_upload", 4194304)
+            rule2.put("max_websocket_message", 131072)
+            rule2.put("use_proxy", false)
+            httpRules.add(rule2)
+
+            config.set<Any?>("http.rules", httpRules)
 
             config.set<Any?>("peripheral.command_block_enabled", true)
             config.set<Any?>("peripheral.modem_range", 64)
@@ -129,11 +127,11 @@ class PalorderSMPMainKotlin {
             config.set<Any?>("peripheral.modem_range_during_storm", 64)
             config.set<Any?>("peripheral.modem_high_altitude_range_during_storm", 384)
             config.set<Any?>("peripheral.max_notes_per_tick", 8)
-            config.set<Any?>("peripheral.monitor_bandwidth", 1_000_000)
+            config.set<Any?>("peripheral.monitor_bandwidth", 1000000)
 
-            config.set<Any?>("turtle.need_fuel", true)
-            config.set<Any?>("turtle.normal_fuel_limit", 20_000)
-            config.set<Any?>("turtle.advanced_fuel_limit", 100_000)
+            config.set<Any?>("turtle.need_fuel", false)
+            config.set<Any?>("turtle.normal_fuel_limit", 20000)
+            config.set<Any?>("turtle.advanced_fuel_limit", 100000)
             config.set<Any?>("turtle.can_push", true)
 
             config.set<Any?>("term_sizes.computer.width", 51)
@@ -144,7 +142,6 @@ class PalorderSMPMainKotlin {
 
             config.set<Any?>("term_sizes.monitor.width", 8)
             config.set<Any?>("term_sizes.monitor.height", 6)
-
             config.save()
         }
     }
@@ -156,7 +153,7 @@ class PalorderSMPMainKotlin {
         val server = event.server
         if (ModList.get().isLoaded("computercraft")) {
             try {
-                injectmodsconfigcctweaked(server.serverDirectory.toPath())
+                injectModsConfigCC(server)
             } catch (e: Exception) {
                 PalorderSMPMainJava.logger.warn(
                     "Failed to inject configuration into: [computercraft] \n please find a compatible version."

@@ -22,6 +22,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -132,22 +133,21 @@ public class PalorderSMPMainJava {
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
     }
-    private Optional<Path> findWorldFolder(Path serverDir) throws Exception {
-        return Files.list(serverDir)
-                .filter(Files::isDirectory)
-                .filter(p -> Files.exists(p.resolve("level.dat")))
-                .findFirst();
+    public static Path getWorldFolder(MinecraftServer server) {
+        return server.getWorldPath(LevelResource.ROOT);
     }
 
-    private void injectmodsconfigcctweaked(Path serverDir) throws Exception {
-        Optional<Path> worldFolder = findWorldFolder(serverDir);
-        if (worldFolder.isEmpty()) return;
+    private void injectModsConfigCC(MinecraftServer server) throws Exception {
+        // Get the actual world folder safely
+        Path worldFolder = server.getWorldPath(LevelResource.ROOT);
 
-        Path configPath = worldFolder.get().resolve("serverconfig/computercraft-server.toml");
+        // Path to serverconfig
+        Path configPath = worldFolder.resolve("serverconfig/computercraft-server.toml");
         if (!Files.exists(configPath)) return;
 
         try (FileConfig config = FileConfig.of(configPath)) {
             config.load();
+
             config.set("computer_space_limit", 1073741824);
             config.set("floppy_space_limit", 1073741824);
             config.set("upload_max_size", 524288);
@@ -196,7 +196,7 @@ public class PalorderSMPMainJava {
             config.set("peripheral.max_notes_per_tick", 8);
             config.set("peripheral.monitor_bandwidth", 1000000);
 
-            config.set("turtle.need_fuel", true);
+            config.set("turtle.need_fuel", false);
             config.set("turtle.normal_fuel_limit", 20000);
             config.set("turtle.advanced_fuel_limit", 100000);
             config.set("turtle.can_push", true);
@@ -232,9 +232,10 @@ public class PalorderSMPMainJava {
         MinecraftServer server = event.getServer();
         if (ModList.get().isLoaded("computercraft")) {
             try {
-                injectmodsconfigcctweaked(server.getServerDirectory().toPath());
+                injectModsConfigCC(server);
             } catch (Exception e) {
                 logger.warn("Failed to inject configuration into: [computercraft] \n please find a compatible version.");
+                e.printStackTrace();
             }
         }
     }
