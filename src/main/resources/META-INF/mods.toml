@@ -1,15 +1,16 @@
 modLoader="javafml"
-loaderVersion="[47,)"
+loaderVersion="[47,)"  # Accepts any loader version 47 or higher
 license="All rights reserved"
 issueTrackerURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP/issues"
 
 [[mods]]
 modId="palordersmp_tweaked"
-version="3.0"
+version="3.1"
 displayName="PalorderSMP tweaked"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
+logoFile="LongLiveTheEmpire.png"
 credits="Created by PalorderSoftWorksOfficial"
-authors="PalorderSoftWorksOfficial, SquidDev"
+authors="PalorderSoftWorksOfficial,SquidDev"
 description='''
 PalorderSMP-Tweaked is a powerful server-side modification created by PalorderSoftWorksOfficial.
 It enhances server management and gameplay features while maintaining full compatibility with Minecraft 1.20.1.

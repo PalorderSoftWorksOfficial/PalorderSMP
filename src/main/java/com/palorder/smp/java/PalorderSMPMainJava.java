@@ -9,6 +9,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -21,6 +22,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -37,6 +39,11 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.fml.ModList;
 
+import com.electronwill.nightconfig.core.Config;
+import com.electronwill.nightconfig.core.file.FileConfig;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -68,6 +75,7 @@ import dan200.computercraft.api.turtle.ITurtleUpgrade;
 import dan200.computercraft.api.turtle.ITurtleAccess;
 import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider;  // :contentReference[oaicite:4]{index=4}
 
+
 // Filesystem / mounts
 import dan200.computercraft.api.filesystem.Mount;
 import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[oaicite:5]{index=5}
@@ -76,7 +84,6 @@ import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[
 // Detail providers & registries (for item/block detail exposed to computers)
 import dan200.computercraft.api.detail.DetailProvider;
 import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -123,14 +130,9 @@ public class PalorderSMPMainJava {
 
     }
     public PalorderSMPMainJava() {
-        // Register mod event buses for items and sounds
-        ITEMS.register(FMLJavaModLoadingContext.get().getModEventBus());
-        SOUND_EVENTS.register(FMLJavaModLoadingContext.get().getModEventBus());
-        MinecraftForge.initialize();
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
     }
-
 
     // ---------------- Chat Item Rewards ----------------
     @SubscribeEvent
@@ -147,11 +149,8 @@ public class PalorderSMPMainJava {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         registerCommands(event.getServer().getCommands().getDispatcher());
-        if (ModList.get().isLoaded("computercraft")) {
-
-        }
+        MinecraftServer server = event.getServer();
     }
-
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         scheduler.shutdown();
@@ -164,74 +163,80 @@ public class PalorderSMPMainJava {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || player.getGameProfile().getId().equals(DEV_UUID) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(context -> {
+                            ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (player == null) return 0;
+                            UUID playerId = player.getGameProfile().getId();
+                            if (!(playerId.equals(OWNER_UUID) || playerId.equals(DEV_UUID) || playerId.equals(OWNER_UUID2))) return 0;
+                            if (nukePendingConfirmation.contains(playerId)) {
+                                player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                            } else {
+                                nukePendingConfirmation.add(playerId);
+                                player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
+                                scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
+                            }
+                            return 1;
+                        }))
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.contains(player.getGameProfile().getId())) {
+                    UUID playerId = player.getGameProfile().getId();
+                    if (nukePendingConfirmation.contains(playerId)) {
                         player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                     } else {
-                        nukePendingConfirmation.add(player.getGameProfile().getId());
+                        nukePendingConfirmation.add(playerId);
                         player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
-                        scheduler.schedule(() -> nukePendingConfirmation.remove(player.getGameProfile().getId()), 30, TimeUnit.SECONDS);
+                        scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
                     }
                     return 1;
-                }));
+                })
+        );
+
         dispatcher.register(Commands.literal("orbitalConfirm")
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
                         return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || player.getGameProfile().getId().equals(OWNER_UUID2)
-                                || player.getGameProfile().getId().equals(DEV_UUID);
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
-                .then(Commands.argument("amount", IntegerArgumentType.integer(0))
-                        .then(Commands.argument("type", StringArgumentType.string())
-                                .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
-                                .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
-                                        .executes(context -> {
-                                            ServerPlayer player = context.getSource().getPlayerOrException();
-                                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                                            String type = StringArgumentType.getString(context, "type");
-                                            int layers = IntegerArgumentType.getInteger(context, "layers");
-
-                                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                                                spawnTNTNuke(player, tntCount, type, layers);
-                                            } else {
-                                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                                            }
-
-                                            return 1;
-                                        })
-                                )
-                        )
-                        .executes(context -> {
-                            // Fallback if only amount is provided
-                            ServerPlayer player = context.getSource().getPlayerOrException();
-                            int tntCount = IntegerArgumentType.getInteger(context, "amount");
-                            if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                                spawnTNTNuke(player, tntCount, "nuke", 5);
-                            } else {
-                                player.sendSystemMessage(Component.literal("No pending orbital strike"));
-                            }
-                            return 1;
-                        })
-                )
-                .executes(context -> {
-                    // Fallback if no arguments
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    if (nukePendingConfirmation.remove(player.getGameProfile().getId())) {
-                        spawnTNTNuke(player, 1, "nuke", 5);
-                    } else {
-                        player.sendSystemMessage(Component.literal("No pending orbital strike"));
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                                .then(Commands.argument("type", StringArgumentType.string())
+                                        .suggests((ctx, builder) ->
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
+                                        .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                                                    if (player == null) return 0;
+                                                    int tntCount = IntegerArgumentType.getInteger(context, "amount");
+                                                    String type = StringArgumentType.getString(context, "type");
+                                                    int layers = IntegerArgumentType.getInteger(context, "layers");
+                                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) type = "nuke";
+                                                    if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
+                                                        spawnTNTNuke(player, tntCount, type, layers);
+                                                    return 1;
+                                                }))))));
+        dispatcher.register(Commands.literal("fastorbital")
+                .requires(source -> {
+                    try {
+                        var player = source.getPlayerOrException();
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
+                })
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    spawnTNTNuke(player,500,"nuke",10);
                     return 1;
                 })
         );

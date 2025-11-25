@@ -6,8 +6,8 @@ plugins {
 }
 
 group = 'com.palorder.smp.java'
-version = '3.0'
-archivesBaseName = 'PalorderSMP-tweaked'
+version = '3.1'
+archivesBaseName = 'palordersmp-tweaked'
 
 java {
     toolchain {
@@ -103,30 +103,36 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": version,
+                "Specification-Version": 3.1,
                 "Implementation-Title": project.name,
-                "Implementation-Version": version,
+                "Implementation-Version": 3.1,
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
     }
 }
 
-// Forge reobfuscation
-jar.finalizedBy('reobfJar')
-
 // ======================================================
-// Publishing (optional local maven repo)
+// Publishing
 // ======================================================
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifact jar
+            groupId = 'com.palorder.smp.java'
+            artifactId = 'palordersmp-tweaked'
+            version = '3.1'
+
         }
     }
+
     repositories {
         maven {
-            url "file://${project.projectDir}/mcmodsrepo"
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/PalorderSoftWorksOfficial/PalorderSMP")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }

@@ -1,16 +1,16 @@
 package com.palorder.smp.kotlin
 
+import com.electronwill.nightconfig.core.file.FileConfig
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.brigadier.suggestion.SuggestionsBuilder
 import com.palorder.smp.java.PalorderSMPMainJava
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
-import net.minecraft.commands.SharedSuggestionProvider
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
@@ -22,24 +22,25 @@ import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.chunk.ChunkStatus
+import net.minecraft.world.level.storage.LevelResource
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.event.TickEvent.LevelTickEvent
+import net.minecraftforge.event.TickEvent.ServerTickEvent
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
-import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import java.nio.file.Files
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -66,21 +67,13 @@ class PalorderSMPMainKotlin {
     annotation class hello
 
     init {
-        // Register mod event buses for items and sounds
-        ITEMS.register(FMLJavaModLoadingContext.get().modEventBus)
-        SOUND_EVENTS.register(FMLJavaModLoadingContext.get().modEventBus)
-        MinecraftForge.initialize()
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this)
     }
-
-
     // ---------------- Server Events ----------------
     @SubscribeEvent
     fun onServerStarting(event: ServerStartingEvent) {
         registerCommands(event.server.commands.dispatcher)
-        if (ModList.get().isLoaded("computercraft")) {
-        }
     }
 
     companion object {
@@ -151,100 +144,74 @@ class PalorderSMPMainKotlin {
         @SubscribeEvent
         fun onServerStopping(event: ServerStoppingEvent?) {
             scheduler.shutdown()
-        }
 
+        }
         // ---------------- Commands ----------------
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack?>) {
-            dispatcher.register(
-                Commands.literal("orbital")
-                    .requires { source: CommandSourceStack ->
-                        try {
-                            val player = source.playerOrException
-                            return@requires player.gameProfile.id == OWNER_UUID
-                                    || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
-                        } catch (e: Exception) {
-                            throw RuntimeException(e)
-                        }
+            dispatcher.register(Commands.literal("orbital")
+                .requires { source: CommandSourceStack ->
+                    try {
+                        val player = source.playerOrException
+                        return@requires player.gameProfile.id == OWNER_UUID
+                                || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
                     }
-                    .executes { context: CommandContext<CommandSourceStack> ->
-                        val player = context.source.playerOrException
-                        if (nukePendingConfirmation.contains(player.gameProfile.id)) {
+                }
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .executes { context ->
+                        val player = context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target")) ?: return@executes 0
+                        val playerId = player.gameProfile.id
+                        if (!(playerId == OWNER_UUID || playerId == DEV_UUID || playerId == OWNER_UUID2)) return@executes 0
+                        if (nukePendingConfirmation.contains(playerId)) {
                             player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
                         } else {
-                            nukePendingConfirmation.add(player.gameProfile.id)
+                            nukePendingConfirmation.add(playerId)
                             player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."))
-                            scheduler.schedule<Boolean>({
-                                nukePendingConfirmation.remove(
-                                    player.gameProfile.id
-                                )
-                            }, 30, TimeUnit.SECONDS)
+                            scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                         }
                         1
                     })
-            dispatcher.register(
-                Commands.literal("orbitalConfirm")
-                    .requires { source: CommandSourceStack ->
-                        try {
-                            val player = source.playerOrException
-                            return@requires player.gameProfile.id == OWNER_UUID
-                                    || player.gameProfile.id == OWNER_UUID2
-                                    || player.gameProfile.id == DEV_UUID
-                        } catch (e: Exception) {
-                            throw RuntimeException(e)
-                        }
+                .executes { context ->
+                    val player = context.source.playerOrException
+                    val playerId = player.gameProfile.id
+                    if (nukePendingConfirmation.contains(playerId)) {
+                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
+                    } else {
+                        nukePendingConfirmation.add(playerId)
+                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."))
+                        scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                     }
-                    .then(
-                        Commands.argument("amount", IntegerArgumentType.integer(0))
-                            .then(
-                                Commands.argument("type", StringArgumentType.string())
-                                    .suggests { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
-                                        SharedSuggestionProvider.suggest(
-                                            listOf("nuke", "stab"),
-                                            builder
-                                        )
-                                    }
-                                    .then(
-                                        Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
-                                            .executes { context: CommandContext<CommandSourceStack> ->
-                                                val player = context.source.playerOrException
-                                                val tntCount = IntegerArgumentType.getInteger(context, "amount")
-                                                var type = StringArgumentType.getString(context, "type")
-                                                val layers = IntegerArgumentType.getInteger(context, "layers")
-
-
-                                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                                                    spawnTNTNuke(player, tntCount, type, layers)
-                                                } else {
-                                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                                                }
-                                                1
-                                            }
-                                    )
-                            )
-                            .executes { context: CommandContext<CommandSourceStack> ->
-                                // Fallback if only amount is provided
-                                val player = context.source.playerOrException
-                                val tntCount = IntegerArgumentType.getInteger(context, "amount")
-                                if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                                    spawnTNTNuke(player, tntCount, "nuke", 5)
-                                } else {
-                                    player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                                }
-                                1
-                            }
-                    )
-                    .executes { context: CommandContext<CommandSourceStack> ->
-                        // Fallback if no arguments
-                        val player = context.source.playerOrException
-                        if (nukePendingConfirmation.remove(player.gameProfile.id)) {
-                            spawnTNTNuke(player, 1, "nuke", 5)
-                        } else {
-                            player.sendSystemMessage(Component.literal("No pending orbital strike"))
-                        }
-                        1
-                    }
+                    1
+                }
             )
 
+            dispatcher.register(Commands.literal("orbitalConfirm")
+                .requires { source: CommandSourceStack ->
+                    try {
+                        val player = source.playerOrException
+                        return@requires player.gameProfile.id == OWNER_UUID
+                                || player.gameProfile.id == DEV_UUID || player.gameProfile.id == OWNER_UUID2
+                    } catch (e: Exception) {
+                        throw RuntimeException(e)
+                    }
+                }
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .then(Commands.argument("amount", IntegerArgumentType.integer(0))
+                        .then(Commands.argument("type", StringArgumentType.string())
+                            .suggests { _, builder ->
+                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab"), builder)
+                            }
+                            .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                .executes { context ->
+                                    val player = context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target")) ?: return@executes 0
+                                    val tntCount = IntegerArgumentType.getInteger(context, "amount")
+                                    var type = StringArgumentType.getString(context, "type")
+                                    val layers = IntegerArgumentType.getInteger(context, "layers")
+                                    if (!type.equals("nuke", true) && !type.equals("stab", true)) type = "nuke"
+                                    if (nukePendingConfirmation.remove(player.gameProfile.id)) spawnTNTNuke(player, tntCount, type, layers)
+                                    1
+                                })))))
             dispatcher.register(
                 Commands.literal("loadallchunks")
                     .requires { source: CommandSourceStack ->

@@ -1,12 +1,9 @@
-# .github/workflows/build-and-release.yml
 name: Build and Release Minecraft Mod
 permissions:
   contents: write
+
 on:
-  push:
-    branches:
-      - main  # adjust if needed
-  workflow_dispatch:  # manual trigger
+  workflow_dispatch:  # manual trigger only
 
 jobs:
   build:
@@ -28,11 +25,11 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-    - name: Upload build artifact
+    - name: Upload build artifacts
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: mod-jar
+        name: mod-jars
         path: build/libs/*.jar
 
   release:
@@ -44,43 +41,38 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Download build artifact
+    - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
-        name: mod-jar
+        name: mod-jars
         path: build/libs/
+
+    - name: Get mod version from build.gradle
+      id: mod_version
+      run: |
+        VERSION=$(grep '^version' build.gradle | head -n1 | sed "s/.*'\(.*\)'.*/\1/")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Get commits since last release
       id: commits
       run: |
-        # Get latest tag, or empty if none
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         if [ -z "$LAST_TAG" ]; then
-          # no previous release, get all commits
           COMMITS=$(git log --pretty=format:"- [%h](https://github.com/${GITHUB_REPOSITORY}/commit/%H) %s (%ad)" --date=short)
         else
-          # commits since last tag
           COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"- [%h](https://github.com/${GITHUB_REPOSITORY}/commit/%H) %s (%ad)" --date=short)
         fi
         echo "commits=$COMMITS" >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release and upload JAR
+    - name: Create GitHub Release and upload all JARs
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ github.run_number }}
-        name: Minecraft Mod Release v${{ github.run_number }}
+        tag_name: v${{ steps.mod_version.outputs.version }}
+        name: Minecraft Mod Release v${{ steps.mod_version.outputs.version }}
         body: |
           ## Commits included in this release
           ${{ steps.commits.outputs.commits }}
-        files: build/libs/*.jar   # <- attach the JAR directly
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-    - name: Upload JAR to Release
-      uses: softprops/action-gh-release@v1
-      with:
         files: build/libs/*.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
