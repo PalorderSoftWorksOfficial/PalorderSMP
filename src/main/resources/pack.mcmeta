@@ -1,6 +1,8 @@
 {
   "pack": {
+    "description": "PalorderSMP Mod,",
     "pack_format": 15,
-    "description": "PalorderSMP Mod"
+    "forge:resource_pack_format": 9,
+    "forge:data_pack_format": 9
   }
 }

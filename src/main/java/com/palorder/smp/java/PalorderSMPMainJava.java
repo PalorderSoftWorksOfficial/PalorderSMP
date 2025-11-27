@@ -1,37 +1,128 @@
 package com.palorder.smp.java;
 
-import dan200.computercraft.api.ComputerCraftAPI;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.IntegerArgumentType;
-import net.minecraft.commands.arguments.StringArgumentType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.ClipContext;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ChunkPos;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.ServerChatEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import net.minecraftforge.fml.ModList;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.*;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 
+import com.electronwill.nightconfig.core.Config;
+import com.electronwill.nightconfig.core.file.FileConfig;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class PalorderSMPMainJava implements ModInitializer {
+// Core entry point
+import dan200.computercraft.api.ComputerCraftAPI;  // :contentReference[oaicite:1]{index=1}
 
-    public static final Logger logger = LogManager.getLogger("PalorderSMP");
 
+// Lua‑API interfaces
+import dan200.computercraft.api.lua.ILuaAPI;
+import dan200.computercraft.api.lua.ILuaAPIFactory;
+import dan200.computercraft.api.lua.ILuaContext;
+import dan200.computercraft.api.lua.ILuaFunction;
+import dan200.computercraft.api.lua.IArguments;
+import dan200.computercraft.api.lua.LuaTable;
+import dan200.computercraft.api.lua.LuaValues;
+import dan200.computercraft.api.lua.MethodResult;  // :contentReference[oaicite:2]{index=2}
+
+
+// Peripheral / Computer interfaces
+import dan200.computercraft.api.peripheral.IPeripheral;
+import dan200.computercraft.api.peripheral.IComputerAccess;
+import dan200.computercraft.api.peripheral.IDynamicPeripheral;  // :contentReference[oaicite:3]{index=3}
+
+
+// Turtle / upgrade interfaces
+import dan200.computercraft.api.turtle.ITurtleUpgrade;
+import dan200.computercraft.api.turtle.ITurtleAccess;
+import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider;  // :contentReference[oaicite:4]{index=4}
+
+
+// Filesystem / mounts
+import dan200.computercraft.api.filesystem.Mount;
+import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[oaicite:5]{index=5}
+
+
+// Detail providers & registries (for item/block detail exposed to computers)
+import dan200.computercraft.api.detail.DetailProvider;
+import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+@Mod("palordersmp_tweaked")
+@Mod.EventBusSubscriber(modid = "palordersmp_tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class PalorderSMPMainJava {
+
+    // ---------------- Deferred Registers ----------------
+    public static final DeferredRegister<Item> ITEMS =
+            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp_tweaked");
+    public static final DeferredRegister<Block> BLOCKS =
+            DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked");
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked");
+
+
+
+    public static final Logger logger = LogManager.getLogger(PalorderSMPMainJava.class);
     // ---------------- Server / Scheduler ----------------
     public static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
     public static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
@@ -46,68 +137,57 @@ public class PalorderSMPMainJava implements ModInitializer {
 
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
+    private static final Logger log = LogManager.getLogger(PalorderSMPMainJava.class);
+
     static {
         chatItemRewards.put("gimme natherite blocks ples", new ItemStack(Items.NETHERITE_BLOCK, 64));
         chatItemRewards.put("i need food ples give me food 2 stacks ples", new ItemStack(Items.GOLDEN_CARROT, 128));
         chatItemRewards.put("gimme natherite blocks ples adn i want 2 stacks ples", new ItemStack(Items.NETHERITE_BLOCK, 128));
         chatItemRewards.put("i need food ples give me food ples", new ItemStack(Items.GOLDEN_CARROT, 64));
     }
+    public @interface hello {
 
-    @Override
-    public void onInitialize() {
-        logger.info("PalorderSMP Fabric mod initialized");
-
-        if (ComputerCraftAPI.isInstalled()) {
-            logger.info("ComputerCraft is installed, registering addon stuff. (non-existent)");
+    }
+    public PalorderSMPMainJava() {
+        // Register this class to the Forge event bus
+        MinecraftForge.EVENT_BUS.register(this);
+        if (ModList.get().isLoaded("computercraft")) {
+            logger.info("ComputerCraft is installed, Registering addon stuff. (non-existent lmao)");
         } else {
             logger.warn("ComputerCraft is NOT present!");
         }
-
-        // Register commands
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            registerCommands(dispatcher);
-        });
-
-        // Server tick event for frozen TNT cleanup
-        ServerTickEvents.END_WORLD_TICK.register(world -> {
-            if (!(world instanceof ServerLevel serverWorld)) return;
-            Set<ChunkPos> frozen = pausedChunks.get(serverWorld);
-            if (frozen == null || frozen.isEmpty()) return;
-            Set<Entity> entities = nukeSpawnedEntities.get(serverWorld);
-            if (entities == null || entities.isEmpty()) return;
-
-            Iterator<Entity> iterator = entities.iterator();
-            int processedPerTick = 100;
-            int count = 0;
-
-            while (iterator.hasNext() && count < processedPerTick) {
-                Entity e = iterator.next();
-                ChunkPos chunkPos = new ChunkPos(e.blockPosition());
-                if (frozen.contains(chunkPos)) {
-                    e.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
-                    iterator.remove();
-                    count++;
-                }
-            }
-
-            if (entities.isEmpty()) nukeSpawnedEntities.remove(serverWorld);
-            if (frozen.isEmpty()) pausedChunks.remove(serverWorld);
-        });
     }
 
-    public static void handleChatItemRequests(ServerPlayer player, String message) {
+    // ---------------- Chat Item Rewards ----------------
+    @SubscribeEvent
+    public static void handleChatItemRequests(ServerChatEvent event) {
+        String message = event.getMessage().getString();
+        ServerPlayer player = event.getPlayer();
         if (chatItemRewards.containsKey(message)) {
             player.getInventory().add(chatItemRewards.get(message));
         }
+
+    }
+
+    // ---------------- Server Events ----------------
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        registerCommands(event.getServer().getCommands().getDispatcher());
+        MinecraftServer server = event.getServer();
+    }
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        scheduler.shutdown();
     }
 
     // ---------------- Commands ----------------
-    public static void registerCommands(net.minecraft.commands.CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("orbital")
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
-                        return player.getUUID().equals(OWNER_UUID) || player.getUUID().equals(OWNER_UUID2) || player.getName().getString().equalsIgnoreCase("dev");
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -116,7 +196,7 @@ public class PalorderSMPMainJava implements ModInitializer {
                         .executes(context -> {
                             ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
                             if (player == null) return 0;
-                            UUID playerId = player.getUUID();
+                            UUID playerId = player.getGameProfile().getId();
                             if (!(playerId.equals(OWNER_UUID) || playerId.equals(DEV_UUID) || playerId.equals(OWNER_UUID2))) return 0;
                             if (nukePendingConfirmation.contains(playerId)) {
                                 player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
@@ -129,7 +209,7 @@ public class PalorderSMPMainJava implements ModInitializer {
                         }))
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    UUID playerId = player.getUUID();
+                    UUID playerId = player.getGameProfile().getId();
                     if (nukePendingConfirmation.contains(playerId)) {
                         player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                     } else {
@@ -145,7 +225,8 @@ public class PalorderSMPMainJava implements ModInitializer {
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
-                        return player.getUUID().equals(OWNER_UUID) || player.getUUID().equals(OWNER_UUID2) || player.getName().getString().equalsIgnoreCase("dev");
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -163,23 +244,23 @@ public class PalorderSMPMainJava implements ModInitializer {
                                                     String type = StringArgumentType.getString(context, "type");
                                                     int layers = IntegerArgumentType.getInteger(context, "layers");
                                                     if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) type = "nuke";
-                                                    if (nukePendingConfirmation.remove(player.getUUID()))
+                                                    if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
                                                         spawnTNTNuke(player, tntCount, type, layers);
                                                     return 1;
                                                 }))))));
-
         dispatcher.register(Commands.literal("fastorbital")
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
-                        return player.getUUID().equals(OWNER_UUID) || player.getUUID().equals(OWNER_UUID2) || player.getName().getString().equalsIgnoreCase("dev");
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    spawnTNTNuke(player, 500, "nuke", 10);
+                    spawnTNTNuke(player,500,"nuke",10);
                     return 1;
                 })
         );
@@ -188,20 +269,22 @@ public class PalorderSMPMainJava implements ModInitializer {
                 .requires(source -> {
                     try {
                         var player = source.getPlayerOrException();
-                        return player.getUUID().equals(OWNER_UUID) || player.getUUID().equals(OWNER_UUID2) || player.getName().getString().equalsIgnoreCase("dev");
+                        return player.getGameProfile().getId().equals(OWNER_UUID)
+                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .executes(context -> {
                     ServerPlayer player = context.getSource().getPlayerOrException();
-                    ServerLevel world = player.getLevel();
+                    ServerLevel world = player.serverLevel();
 
                     Set<ChunkPos> chunks = pausedChunks.get(world);
                     if (chunks != null) {
                         for (ChunkPos pos : chunks) {
                             world.getChunk(pos.x, pos.z);
                             world.getChunkSource().getChunk(pos.x, pos.z, net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
+
                         }
 
                         Set<Entity> entities = nukeSpawnedEntities.get(world);
@@ -210,7 +293,9 @@ public class PalorderSMPMainJava implements ModInitializer {
                             while (iterator.hasNext()) {
                                 Entity e = iterator.next();
                                 ChunkPos eChunkPos = new ChunkPos(e.blockPosition());
-                                if (chunks.contains(eChunkPos)) iterator.remove();
+                                if (chunks.contains(eChunkPos)) {
+                                    iterator.remove();
+                                }
                             }
                         }
 
@@ -221,22 +306,25 @@ public class PalorderSMPMainJava implements ModInitializer {
                 }));
     }
 
-    // ---------------- Nuke spawn ----------------
+    // ---------------- Nuke Spawn ----------------
     public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type, Integer layers) {
         ServerLevel world = (ServerLevel) player.level();
 
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
         Vec3 end = eyePos.add(lookVec.scale(100000.0));
-        BlockHitResult hitResult = world.clip(new ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        BlockHitResult hitResult = world.clip(new ClipContext(
+                eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
+        ));
         Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
 
-        nukePlayerTeleportBack.put(player.getUUID(), player.position());
+        nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
 
         double spawnHeight = targetPos.y + 30;
         double layerStepY = 1.0;
         double spacing = 1.5;
         Random rand = new Random();
+
         int totalTNT = (tnts != null && tnts > 0) ? tnts : 300;
 
         int playerChunkX = (int) player.getX() >> 4;
@@ -252,7 +340,8 @@ public class PalorderSMPMainJava implements ModInitializer {
 
         int spawned = 0;
 
-        if ("stab".equalsIgnoreCase(type)) {
+        if (type.equals("stab")) {
+
             for (int i = 0; i < totalTNT; i++) {
                 PrimedTnt tnt = EntityType.TNT.create(world);
                 if (tnt != null) {
@@ -262,13 +351,22 @@ public class PalorderSMPMainJava implements ModInitializer {
                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                 }
             }
-        } else if ("nuke".equalsIgnoreCase(type)) {
+
+        } else if (type.equals("nuke")) {
+
             for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
+
                 double y = spawnHeight + layer * layerStepY;
+
                 for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
+
+                    // PATCH: radius now increases with layer too (The multiplier is so fucked lmao)
                     double radius = ring * 3.0 * (layer + 1);
+
                     int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
+
                     for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+
                         double angle = 2 * Math.PI * i / tntInRing;
                         double x = targetPos.x + Math.cos(angle) * radius;
                         double z = targetPos.z + Math.sin(angle) * radius;
@@ -284,11 +382,47 @@ public class PalorderSMPMainJava implements ModInitializer {
                     }
                 }
             }
+
         } else if (type == null) {
-            IllegalArgumentException ex = new IllegalArgumentException("type can't be nothing, how did you do this.");
+
+            IllegalArgumentException ex =
+                    new IllegalArgumentException("type cant be nothing, how did you do this.");
             logger.error("Invalid argument encountered", ex);
         }
+        player.sendSystemMessage(Component.literal(
+                "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type
+        ));
+    }
 
-        player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type));
+    // ---------------- Derender TNT safely ----------------
+    @Deprecated()
+    @SubscribeEvent
+    public static void onWorldTick(TickEvent.LevelTickEvent event) {
+        if (event.phase == TickEvent.Phase.START) return;
+        if (!(event.level instanceof ServerLevel world)) return;
+
+        Set<ChunkPos> frozen = pausedChunks.get(world);
+        if (frozen == null || frozen.isEmpty()) return;
+
+        Set<Entity> entities = nukeSpawnedEntities.get(world);
+        if (entities == null || entities.isEmpty()) return;
+
+        Iterator<Entity> iterator = entities.iterator();
+        int processedPerTick = 100; // adjustable for server performance
+        int count = 0;
+
+        while (iterator.hasNext() && count < processedPerTick) {
+            Entity e = iterator.next();
+            ChunkPos chunkPos = new ChunkPos(e.blockPosition());
+            if (frozen.contains(chunkPos)) {
+                e.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK);
+                iterator.remove();
+                count++;
+            }
+        }
+
+        // Clean up empty maps
+        if (entities.isEmpty()) nukeSpawnedEntities.remove(world);
+        if (frozen.isEmpty()) pausedChunks.remove(world);
     }
 }

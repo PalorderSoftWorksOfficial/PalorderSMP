@@ -1,13 +1,11 @@
 pluginManagement {
     repositories {
+        maven { url = "https://maven.minecraftforge.net" }
         gradlePluginPortal()
         mavenCentral()
-        maven { url = "https://maven.fabricmc.net/" }
-        maven { url = "https://maven.fabricmc.net/fabric-loom/"}
     }
     plugins {
-        id 'org.jetbrains.kotlin.jvm' version '2.0.0'
-        id 'fabric-loom' version '0.13.9'
+        id 'org.jetbrains.kotlin.jvm' version '2.0.21'
     }
 }
 
