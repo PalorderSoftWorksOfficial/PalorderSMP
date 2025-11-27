@@ -83,6 +83,7 @@ dependencies {
     compileOnly "cc.tweaked:cc-tweaked-1.20.1-common-api:1.116.1"
     compileOnly(fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge-api:1.116.1"))
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
+    implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.116.1")
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -103,9 +104,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": 3.1,
+                "Specification-Version": 3.2,
                 "Implementation-Title": project.name,
-                "Implementation-Version": 3.1,
+                "Implementation-Version": 3.2,
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
@@ -120,7 +121,7 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
-            version = '3.1'
+            version = '3.2'
 
         }
     }

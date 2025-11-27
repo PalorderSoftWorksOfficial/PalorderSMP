@@ -21,6 +21,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.BlockHitResult;
@@ -38,6 +40,25 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.fml.ModList;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.*;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
+import org.jetbrains.annotations.Nullable;
 
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.file.FileConfig;
@@ -94,15 +115,13 @@ public class PalorderSMPMainJava {
     // ---------------- Deferred Registers ----------------
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp_tweaked");
-    @Deprecated(forRemoval = true, since = "rewritten")
-    public static final RegistryObject<Item> deathban_revive =
-            ITEMS.register("deathban_revive", () -> new Item(new Item.Properties()));
-    @Deprecated(forRemoval = true, since = "rewritten")
-    public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
-            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, "palordersmp_tweaked");
-    @Deprecated(forRemoval = true, since = "rewritten")
-    public static final RegistryObject<SoundEvent> REVENGE_SOUND_EVENT =
-            SOUND_EVENTS.register("revenge", () -> SoundEvent.createVariableRangeEvent(new ResourceLocation("palordersmp_tweaked", "revenge")));
+    public static final DeferredRegister<Block> BLOCKS =
+            DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked");
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked");
+
+
+
     public static final Logger logger = LogManager.getLogger(PalorderSMPMainJava.class);
     // ---------------- Server / Scheduler ----------------
     public static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
@@ -132,6 +151,11 @@ public class PalorderSMPMainJava {
     public PalorderSMPMainJava() {
         // Register this class to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
+        if (ModList.get().isLoaded("computercraft")) {
+            logger.info("ComputerCraft is installed, Registering addon stuff. (non-existent lmao)");
+        } else {
+            logger.warn("ComputerCraft is NOT present!");
+        }
     }
 
     // ---------------- Chat Item Rewards ----------------
@@ -190,7 +214,7 @@ public class PalorderSMPMainJava {
                         player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                     } else {
                         nukePendingConfirmation.add(playerId);
-                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
+                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"));
                         scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
                     }
                     return 1;
@@ -336,7 +360,7 @@ public class PalorderSMPMainJava {
 
                 for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
 
-                    // PATCH: radius now increases with layer too
+                    // PATCH: radius now increases with layer too (The multiplier is so fucked lmao)
                     double radius = ring * 3.0 * (layer + 1);
 
                     int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
@@ -371,6 +395,7 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Derender TNT safely ----------------
+    @Deprecated()
     @SubscribeEvent
     public static void onWorldTick(TickEvent.LevelTickEvent event) {
         if (event.phase == TickEvent.Phase.START) return;
