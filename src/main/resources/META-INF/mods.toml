@@ -17,7 +17,18 @@ It enhances server management and gameplay features while maintaining full compa
 Future updates will include integration with popular mods like ComputerCraft to expand automation and scripting capabilities.
 Designed for stability, performance, and ease of use, this mod is ideal for both small and large server environments.
 '''
-
+[[mods]]
+modId="palordersmp_tweaked_kotlin_beta"
+version="3.2"
+displayName="PalorderSMP tweaked kotlin beta"
+displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
+logoFile="LongLiveTheEmpire.png"
+credits="Created by PalorderSoftWorksOfficial"
+authors="PalorderSoftWorksOfficial,SquidDev"
+description='''
+This is a kotlin beta build of that requires kotlin for forge!
+These builds are mostly unstable as these are included in the main jar for compatibiltity
+'''
 [[dependencies.palordersmp_tweaked]]
 modId="forge"
 mandatory=true
@@ -38,6 +49,25 @@ versionRange="[1.113.1,)"
 ordering="AFTER"
 side="BOTH"
 [[dependencies.palordersmp_tweaked]]
+modId="kotlinforforge"
+mandatory=false
+versionRange="[4.3.0,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.palordersmp_tweaked_kotlin_beta]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.palordersmp_tweaked_kotlin_beta]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.palordersmp_tweaked_kotlin_beta]]
 modId="kotlinforforge"
 mandatory=false
 versionRange="[4.3.0,)"
