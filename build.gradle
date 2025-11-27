@@ -1,5 +1,5 @@
 plugins {
-    id 'net.minecraftforge.gradle' version '5.1.+'
+    id 'net.neoforged.moddev' version '2.0.119'
     id 'java'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '1.9.0'
@@ -14,81 +14,43 @@ java {
         languageVersion = JavaLanguageVersion.of(17)
     }
 }
-// ======================================================
-// Minecraft Forge settings (ForgeGradle 5 syntax)
-// ======================================================
-minecraft {
-    mappings channel: 'official', version: '1.20.1'
+
+neoForge {
+    version = '1.20.1-47.1.99'
 
     runs {
-        client {
-            taskName = 'runClient'
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
+        client { client() }
+        server { server() }
+        data { data() }
+    }
 
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
+    mods {
+        palordersmp_tweaked_kotlin_beta {
+
         }
+        palordersmp_tweaked {
 
-        server {
-            taskName = 'runServer'
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
         }
-
-        data {
-            workingDirectory project.file('run')
-            args '--mod', 'palordersmp', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
-        }
+        kotlinforforge { }
     }
 }
-// ======================================================
-// Repositories
-// ======================================================
+
 repositories {
-    maven {
-        name = 'CC-tweaked'
-        url "https://maven.squiddev.cc"
-        content {
-            includeGroup("cc.tweaked")
-        }
-    }
-    maven {
-        name = 'Kotlin for Forge'
-        url = 'https://thedarkcolour.github.io/KotlinForForge/'
-    }
-    maven { url = "https://maven.minecraftforge.net" }
+    maven { url = "https://maven.squiddev.cc" }
+    maven { url = "https://thedarkcolour.github.io/KotlinForForge/" }
+    maven { url = "https://maven.neoforged.net/releases" }
     mavenCentral()
 }
 
-// ======================================================
-// Dependencies
-// ======================================================
 dependencies {
-    minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
+    implementation 'net.neoforged:neoforge:+'
 
-    compileOnly("cc.tweaked:cc-tweaked-1.20.1-core-api:1.113.1")
+    compileOnly "cc.tweaked:cc-tweaked-1.20.1-core-api:1.113.1"
     compileOnly "cc.tweaked:cc-tweaked-1.20.1-common-api:1.113.1"
-    compileOnly(fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge-api:1.113.1"))
+    compileOnly "cc.tweaked:cc-tweaked-1.20.1-forge-api:1.113.1"
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
+    implementation "cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1"
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
 }
 
@@ -97,45 +59,37 @@ tasks.withType(JavaCompile).configureEach {
 }
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlin {
-        jvmToolchain(17) // sets JDK 17 for Kotlin compilation
+        jvmToolchain(17)
     }
 }
-// ======================================================
-// Jar Packaging
-// ======================================================
+
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
-        attributes([
-                "Specification-Title": "PalorderSMP-Tweaked",
-                "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": 3.2,
-                "Implementation-Title": project.name,
-                "Implementation-Version": 3.2,
-                "Implementation-Vendor": "PalorderSoftWorks",
-                "Automatic-Module-Name": project.name.toLowerCase()
-        ])
+        attributes(
+                "Specification-Title"    : "PalorderSMP-Tweaked",
+                "Specification-Vendor"   : "PalorderSoftWorks",
+                "Specification-Version"  : version,
+                "Implementation-Title"   : project.name,
+                "Implementation-Version" : version,
+                "Implementation-Vendor"  : "PalorderSoftWorks",
+                "Automatic-Module-Name"  : project.name.toLowerCase()
+        )
     }
 }
 
-// ======================================================
-// Publishing
-// ======================================================
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'com.palorder.smp.java'
-            artifactId = 'palordersmp-tweaked'
-            version = '3.2'
-
+            groupId = project.group
+            artifactId = archivesBaseName
+            version = project.version
         }
     }
-
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/PalorderSoftWorksOfficial/PalorderSMP")
+            url  = uri("https://maven.pkg.github.com/PalorderSoftWorksOfficial/PalorderSMP")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
