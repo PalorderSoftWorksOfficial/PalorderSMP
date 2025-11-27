@@ -1,8 +1,8 @@
 plugins {
-    id 'net.minecraftforge.gradle' version '5.1.+'
     id 'java'
     id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.0'
+    id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'fabric-loom' version '0.13.9'
 }
 
 group = 'com.palorder.smp.java'
@@ -14,82 +14,25 @@ java {
         languageVersion = JavaLanguageVersion.of(17)
     }
 }
-// ======================================================
-// Minecraft Forge settings (ForgeGradle 5 syntax)
-// ======================================================
-minecraft {
-    mappings channel: 'official', version: '1.20.1'
 
-    runs {
-        client {
-            taskName = 'runClient'
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        server {
-            taskName = 'runServer'
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-            args '--mod', 'palordersmp', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-
-            mods {
-                palordersmp {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
-}
-// ======================================================
-// Repositories
-// ======================================================
 repositories {
-    maven {
-        name = 'CC-tweaked'
-        url "https://maven.squiddev.cc"
-        content {
-            includeGroup("cc.tweaked")
-        }
-    }
-    maven {
-        name = 'Kotlin for Forge'
-        url = 'https://thedarkcolour.github.io/KotlinForForge/'
-    }
-    maven { url = "https://maven.minecraftforge.net" }
+    maven { url = "https://maven.fabricmc.net/" }
+    maven { url ="https://maven.fabricmc.net/fabric-loom/"}
+    maven { url = "https://maven.squiddev.cc" }
     mavenCentral()
 }
 
-// ======================================================
-// Dependencies
-// ======================================================
 dependencies {
-    minecraft "net.minecraftforge:forge:1.20.1-47.4.10"
+    minecraft "com.mojang:minecraft:1.20.1"
+    mappings "net.fabricmc:yarn:1.20.1+build.6:v2"
+    modImplementation "net.fabricmc:fabric-loader:0.16.6"
 
     compileOnly("cc.tweaked:cc-tweaked-1.20.1-core-api:1.113.1")
-    compileOnly "cc.tweaked:cc-tweaked-1.20.1-common-api:1.113.1"
-    compileOnly(fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge-api:1.113.1"))
+    compileOnly("cc.tweaked:cc-tweaked-1.20.1-common-api:1.113.1")
+    implementation("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
-    implementation 'thedarkcolour:kotlinforforge:4.11.0'
+    modImplementation("net.fabricmc:fabric-language-kotlin:1.13.7+kotlin.2.2.21")
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -97,41 +40,33 @@ tasks.withType(JavaCompile).configureEach {
 }
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlin {
-        jvmToolchain(17) // sets JDK 17 for Kotlin compilation
+        jvmToolchain(17)
     }
 }
-// ======================================================
-// Jar Packaging
-// ======================================================
+
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
     manifest {
-        attributes([
+        attributes(
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": 3.2,
+                "Specification-Version": version,
                 "Implementation-Title": project.name,
-                "Implementation-Version": 3.2,
+                "Implementation-Version": version,
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
-        ])
+        )
     }
 }
 
-// ======================================================
-// Publishing
-// ======================================================
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            groupId = 'com.palorder.smp.java'
-            artifactId = 'palordersmp-tweaked'
-            version = '3.2'
-
+            groupId = project.group
+            artifactId = archivesBaseName
+            version = project.version
         }
     }
-
     repositories {
         maven {
             name = "GitHubPackages"
@@ -140,6 +75,19 @@ publishing {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
             }
+        }
+    }
+}
+
+loom {
+    runConfigs {
+        client {
+            name = "Fabric Client"
+            runDir = project.file("run")
+        }
+        server {
+            name = "Fabric Server"
+            runDir = project.file("run")
         }
     }
 }
