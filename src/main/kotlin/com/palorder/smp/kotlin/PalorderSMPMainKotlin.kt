@@ -154,14 +154,17 @@ class PalorderSMPMainKotlin {
         // ---------------- Commands ----------------
         @JvmStatic
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack>) {
+
             dispatcher.register(
                 Commands.literal("orbital")
                     .requires { source ->
                         try {
-                            val player = source.playerOrException
-                            player.gameProfile.id == OWNER_UUID
-                                    || player.name.string.equals("dev", ignoreCase = true)
-                                    || player.gameProfile.id == OWNER_UUID2
+                            val player = source.player
+                            if (player != null) {
+                                player.gameProfile.id == OWNER_UUID ||
+                                        player.name.string.equals("dev", ignoreCase = false) ||
+                                        player.gameProfile.id == OWNER_UUID2
+                            } else true
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -169,16 +172,18 @@ class PalorderSMPMainKotlin {
                     .then(
                         Commands.argument("target", StringArgumentType.word())
                             .executes { context ->
-                                val player =
-                                    context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
-                                        ?: return@executes 0
+                                val player = context.source.server.playerList
+                                    .getPlayerByName(StringArgumentType.getString(context, "target"))
+                                    ?: return@executes 0
+
                                 val playerId = player.gameProfile.id
                                 if (!(playerId == OWNER_UUID || playerId == DEV_UUID || playerId == OWNER_UUID2)) return@executes 0
+
                                 if (nukePendingConfirmation.contains(playerId)) {
-                                    player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
+                                    context.source.sendSuccess({ Component.literal("Pending confirmation! Use /orbitalConfirm") }, false)
                                 } else {
                                     nukePendingConfirmation.add(playerId)
-                                    player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."))
+                                    context.source.sendSuccess({ Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block.") }, false)
                                     scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                                 }
                                 1
@@ -190,15 +195,15 @@ class PalorderSMPMainKotlin {
                         } catch (e: Exception) {
                             return@executes 0
                         }
+
                         val playerId = player.gameProfile.id
                         if (nukePendingConfirmation.contains(playerId)) {
-                            player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"))
+                            context.source.sendSuccess({ Component.literal("Pending confirmation! Use /orbitalConfirm") }, false)
                         } else {
                             nukePendingConfirmation.add(playerId)
-                            player.sendSystemMessage(
-                                Component.literal(
-                                    "Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"
-                                )
+                            context.source.sendSuccess(
+                                { Component.literal("Type /orbitalConfirm <ARGS HERE>\nHave fun dominating the server :3") },
+                                false
                             )
                             scheduler.schedule({ nukePendingConfirmation.remove(playerId) }, 30, TimeUnit.SECONDS)
                         }
@@ -210,10 +215,12 @@ class PalorderSMPMainKotlin {
                 Commands.literal("orbitalConfirm")
                     .requires { source ->
                         try {
-                            val player = source.playerOrException
-                            player.gameProfile.id == OWNER_UUID
-                                    || player.name.string.equals("dev", ignoreCase = true)
-                                    || player.gameProfile.id == OWNER_UUID2
+                            val player = source.player
+                            if (player != null) {
+                                player.gameProfile.id == OWNER_UUID ||
+                                        player.name.string.equals("dev", ignoreCase = false) ||
+                                        player.gameProfile.id == OWNER_UUID2
+                            } else true
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -224,21 +231,26 @@ class PalorderSMPMainKotlin {
                                 Commands.argument("amount", IntegerArgumentType.integer(0))
                                     .then(
                                         Commands.argument("type", StringArgumentType.string())
-                                            .suggests { ctx, builder ->
+                                            .suggests { _, builder ->
                                                 net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab"), builder)
                                             }
                                             .then(
-                                                Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                                Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                                     .executes { context ->
-                                                        val player =
-                                                            context.source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
-                                                                ?: return@executes 0
+                                                        val player = context.source.server.playerList
+                                                            .getPlayerByName(StringArgumentType.getString(context, "target"))
+                                                            ?: return@executes 0
+
                                                         val tntCount = IntegerArgumentType.getInteger(context, "amount")
                                                         var type = StringArgumentType.getString(context, "type")
                                                         val layers = IntegerArgumentType.getInteger(context, "layers")
-                                                        if (!type.equals("nuke", ignoreCase = true) && !type.equals("stab", ignoreCase = true)) type =
-                                                            "nuke"
-                                                        if (nukePendingConfirmation.remove(player.gameProfile.id)) spawnTNTNuke(player, tntCount, type, layers)
+
+                                                        if (!type.equals("nuke", ignoreCase = true) && !type.equals("stab", ignoreCase = true))
+                                                            type = "nuke"
+
+                                                        if (nukePendingConfirmation.remove(player.gameProfile.id))
+                                                            spawnTNTNuke(player, tntCount, type, layers)
+
                                                         1
                                                     }
                                             )
@@ -252,9 +264,9 @@ class PalorderSMPMainKotlin {
                     .requires { source ->
                         try {
                             val player = source.playerOrException
-                            player.gameProfile.id == OWNER_UUID
-                                    || player.name.string.equals("dev", ignoreCase = true)
-                                    || player.gameProfile.id == OWNER_UUID2
+                            player.gameProfile.id == OWNER_UUID ||
+                                    player.name.string.equals("dev", ignoreCase = true) ||
+                                    player.gameProfile.id == OWNER_UUID2
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -271,9 +283,9 @@ class PalorderSMPMainKotlin {
                     .requires { source ->
                         try {
                             val player = source.playerOrException
-                            player.gameProfile.id == OWNER_UUID
-                                    || player.name.string.equals("dev", ignoreCase = true)
-                                    || player.gameProfile.id == OWNER_UUID2
+                            player.gameProfile.id == OWNER_UUID ||
+                                    player.name.string.equals("dev", ignoreCase = true) ||
+                                    player.gameProfile.id == OWNER_UUID2
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
@@ -302,7 +314,7 @@ class PalorderSMPMainKotlin {
                             }
 
                             chunks.clear()
-                            player.sendSystemMessage(Component.literal("All frozen chunks reloaded!"))
+                            context.source.sendSuccess({ Component.literal("All frozen chunks reloaded!") }, false)
                         }
 
                         1
@@ -382,8 +394,8 @@ class PalorderSMPMainKotlin {
                 }
 
                 type == null -> {
-                    val ex = IllegalArgumentException("type cant be nothing, how did you do this.")
-                    logger.error("Invalid argument encountered", ex)
+                    val ex = IllegalArgumentException("type cant be nothing, how did you do this?????")
+                    logger.fatal("Invalid argument encountered", ex)
                 }
             }
 

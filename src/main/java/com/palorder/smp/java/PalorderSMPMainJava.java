@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -185,37 +186,47 @@ public class PalorderSMPMainJava {
         dispatcher.register(Commands.literal("orbital")
                 .requires(source -> {
                     try {
-                        var player = source.getPlayerOrException();
-                        return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .then(Commands.argument("target", StringArgumentType.word())
                         .executes(context -> {
-                            ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
-                            if (player == null) return 0;
-                            UUID playerId = player.getGameProfile().getId();
-                            if (!(playerId.equals(OWNER_UUID) || playerId.equals(DEV_UUID) || playerId.equals(OWNER_UUID2))) return 0;
-                            if (nukePendingConfirmation.contains(playerId)) {
-                                player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                            CommandSourceStack source = context.getSource();
+                            ServerPlayer target = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (target == null) return 0;
+                            UUID id = target.getGameProfile().getId();
+                            if (!(id.equals(OWNER_UUID) || id.equals(DEV_UUID) || id.equals(OWNER_UUID2))) return 0;
+                            if (nukePendingConfirmation.contains(id)) {
+                                target.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                             } else {
-                                nukePendingConfirmation.add(playerId);
-                                player.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
-                                scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
+                                nukePendingConfirmation.add(id);
+                                target.sendSystemMessage(Component.literal("Type /orbitalConfirm to spawn 2000 TNT packed in one block."));
+                                scheduler.schedule(() -> nukePendingConfirmation.remove(id), 30, TimeUnit.SECONDS);
                             }
                             return 1;
                         }))
                 .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    UUID playerId = player.getGameProfile().getId();
-                    if (nukePendingConfirmation.contains(playerId)) {
-                        player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                    CommandSourceStack source = context.getSource();
+                    ServerPlayer player = source.getPlayer();
+                    if (player != null) {
+                        UUID id = player.getGameProfile().getId();
+                        if (nukePendingConfirmation.contains(id)) {
+                            player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                        } else {
+                            nukePendingConfirmation.add(id);
+                            player.sendSystemMessage(Component.literal("Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"));
+                            scheduler.schedule(() -> nukePendingConfirmation.remove(id), 30, TimeUnit.SECONDS);
+                        }
                     } else {
-                        nukePendingConfirmation.add(playerId);
-                        player.sendSystemMessage(Component.literal("Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"));
-                        scheduler.schedule(() -> nukePendingConfirmation.remove(playerId), 30, TimeUnit.SECONDS);
+                        source.sendSuccess(() -> Component.literal("Command executed."), false);
                     }
                     return 1;
                 })
@@ -224,9 +235,13 @@ public class PalorderSMPMainJava {
         dispatcher.register(Commands.literal("orbitalConfirm")
                 .requires(source -> {
                     try {
-                        var player = source.getPlayerOrException();
-                        return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -236,9 +251,10 @@ public class PalorderSMPMainJava {
                                 .then(Commands.argument("type", StringArgumentType.string())
                                         .suggests((ctx, builder) ->
                                                 net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
-                                        .then(Commands.argument("layers", IntegerArgumentType.integer(1, 50))
+                                        .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                                 .executes(context -> {
-                                                    ServerPlayer player = context.getSource().getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                                                    CommandSourceStack source = context.getSource();
+                                                    ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
                                                     if (player == null) return 0;
                                                     int tntCount = IntegerArgumentType.getInteger(context, "amount");
                                                     String type = StringArgumentType.getString(context, "type");
@@ -248,19 +264,25 @@ public class PalorderSMPMainJava {
                                                         spawnTNTNuke(player, tntCount, type, layers);
                                                     return 1;
                                                 }))))));
+
         dispatcher.register(Commands.literal("fastorbital")
                 .requires(source -> {
                     try {
-                        var player = source.getPlayerOrException();
-                        return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    spawnTNTNuke(player,500,"nuke",10);
+                    ServerPlayer player = context.getSource().getPlayer();
+                    if (player != null) spawnTNTNuke(player, 500, "nuke", 10);
+                    else context.getSource().sendSuccess(() -> Component.literal("Command executed."), false);
                     return 1;
                 })
         );
@@ -268,23 +290,29 @@ public class PalorderSMPMainJava {
         dispatcher.register(Commands.literal("loadallchunks")
                 .requires(source -> {
                     try {
-                        var player = source.getPlayerOrException();
-                        return player.getGameProfile().getId().equals(OWNER_UUID)
-                                || "dev".equalsIgnoreCase(player.getName().getString()) || player.getGameProfile().getId().equals(OWNER_UUID2);
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayerOrException();
-                    ServerLevel world = player.serverLevel();
+                    CommandSourceStack source = context.getSource();
+                    ServerPlayer player = source.getPlayer();
+                    ServerLevel world;
+                    if (player != null) world = player.serverLevel();
+                    else world = source.getLevel();
 
                     Set<ChunkPos> chunks = pausedChunks.get(world);
                     if (chunks != null) {
                         for (ChunkPos pos : chunks) {
                             world.getChunk(pos.x, pos.z);
                             world.getChunkSource().getChunk(pos.x, pos.z, net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
-
                         }
 
                         Set<Entity> entities = nukeSpawnedEntities.get(world);
@@ -292,18 +320,21 @@ public class PalorderSMPMainJava {
                             Iterator<Entity> iterator = entities.iterator();
                             while (iterator.hasNext()) {
                                 Entity e = iterator.next();
-                                ChunkPos eChunkPos = new ChunkPos(e.blockPosition());
-                                if (chunks.contains(eChunkPos)) {
-                                    iterator.remove();
-                                }
+                                ChunkPos cp = new ChunkPos(e.blockPosition());
+                                if (chunks.contains(cp)) iterator.remove();
                             }
                         }
 
                         chunks.clear();
-                        player.sendSystemMessage(Component.literal("All frozen chunks reloaded!"));
+
+                        if (player != null)
+                            player.sendSystemMessage(Component.literal("All frozen chunks reloaded!"));
+                        else
+                            source.sendSuccess(() -> Component.literal("All frozen chunks reloaded!"), false);
                     }
                     return 1;
-                }));
+                })
+        );
     }
 
     // ---------------- Nuke Spawn ----------------
@@ -395,7 +426,10 @@ public class PalorderSMPMainJava {
     }
 
     // ---------------- Derender TNT safely ----------------
-    @Deprecated()
+    /**
+     * @deprecated This method is unsafe in the main thread, separate it from the main thread or just don't use it, DO NOT USE!
+     */
+    @Deprecated(since = "UNSAFE", forRemoval = true)
     @SubscribeEvent
     public static void onWorldTick(TickEvent.LevelTickEvent event) {
         if (event.phase == TickEvent.Phase.START) return;
