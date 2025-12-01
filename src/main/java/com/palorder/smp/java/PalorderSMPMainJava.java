@@ -215,14 +215,14 @@ public class PalorderSMPMainJava {
                         }))
                 .executes(context -> {
                     CommandSourceStack source = context.getSource();
-                    ServerPlayer player = source.getPlayer();
-                    if (player != null) {
-                        UUID id = player.getGameProfile().getId();
+                    ServerPlayer target = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                    if (target != null) {
+                        UUID id = target.getGameProfile().getId();
                         if (nukePendingConfirmation.contains(id)) {
-                            player.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
+                            target.sendSystemMessage(Component.literal("Pending confirmation! Use /orbitalConfirm"));
                         } else {
                             nukePendingConfirmation.add(id);
-                            player.sendSystemMessage(Component.literal("Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"));
+                            target.sendSystemMessage(Component.literal("Type /orbitalConfirm <ARGS HERE> \n have fun dominating the server :3"));
                             scheduler.schedule(() -> nukePendingConfirmation.remove(id), 30, TimeUnit.SECONDS);
                         }
                     } else {
@@ -279,13 +279,20 @@ public class PalorderSMPMainJava {
                         throw new RuntimeException(e);
                     }
                 })
-                .executes(context -> {
-                    ServerPlayer player = context.getSource().getPlayer();
-                    if (player != null) spawnTNTNuke(player, 500, "nuke", 10);
-                    else context.getSource().sendSuccess(() -> Component.literal("Command executed."), false);
-                    return 1;
-                })
-        );
+                .then(Commands.argument("target", StringArgumentType.word())
+                    .executes(context -> {
+                        CommandSourceStack source = context.getSource();
+                        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                        if (player != null) {
+                            spawnTNTNuke(player, 500, "nuke", 5000);
+                            player.sendSystemMessage(Component.literal("Fastorbitaled be ready lmao"));
+                        }
+                        else {
+                            context.getSource().sendSuccess(() -> Component.literal("Fastorbitaled be ready lmao."), false);
+                        }
+                        return 1;
+                    }))
+            );
 
         dispatcher.register(Commands.literal("loadallchunks")
                 .requires(source -> {

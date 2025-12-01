@@ -263,19 +263,31 @@ class PalorderSMPMainKotlin {
                 Commands.literal("fastorbital")
                     .requires { source ->
                         try {
-                            val player = source.playerOrException
-                            player.gameProfile.id == OWNER_UUID ||
-                                    player.name.string.equals("dev", ignoreCase = true) ||
-                                    player.gameProfile.id == OWNER_UUID2
+                            val player = source.player
+                            if (player != null) {
+                                val id = player.gameProfile.id
+                                id == OWNER_UUID || id == OWNER_UUID2 || player.name.string.equals("dev", ignoreCase = true)
+                            } else {
+                                true
+                            }
                         } catch (e: Exception) {
                             throw RuntimeException(e)
                         }
                     }
-                    .executes { context ->
-                        val player = context.source.playerOrException
-                        spawnTNTNuke(player, 500, "nuke", 10)
-                        1
-                    }
+                    .then(
+                        Commands.argument("target", StringArgumentType.word())
+                            .executes { context ->
+                                val source = context.source
+                                val player = source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
+                                if (player != null) {
+                                    spawnTNTNuke(player, 500, "nuke", 5000)
+                                    player.sendSystemMessage(Component.literal("Fastorbitaled be ready lmao"))
+                                } else {
+                                    source.sendSuccess({ Component.literal("Fastorbitaled be ready lmao.") }, false)
+                                }
+                                1
+                            }
+                    )
             )
 
             dispatcher.register(
