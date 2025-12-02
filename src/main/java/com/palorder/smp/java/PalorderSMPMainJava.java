@@ -294,7 +294,34 @@ public class PalorderSMPMainJava {
                         return 1;
                     }))
             );
-
+        dispatcher.register(Commands.literal("faststab")
+                .requires(source -> {
+                    try {
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(context -> {
+                            CommandSourceStack source = context.getSource();
+                            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (player != null) {
+                                spawnTNTNuke(player, 900, "stab", 1);
+                                player.sendSystemMessage(Component.literal("Faststabbed be ready lmao"));
+                            }
+                            else {
+                                context.getSource().sendSuccess(() -> Component.literal("Faststabbed be ready lmao."), false);
+                            }
+                            return 1;
+                        }))
+        );
         dispatcher.register(Commands.literal("loadallchunks")
                 .requires(source -> {
                     try {
@@ -375,7 +402,7 @@ public class PalorderSMPMainJava {
                     PrimedTnt tnt = EntityType.TNT.create(world);
                     if (tnt != null) {
                         tnt.setPos(targetPos.x, targetPos.y, targetPos.z);
-                        tnt.setFuse(100 + rand.nextInt(2));
+                        tnt.setFuse(100 + rand.nextInt(5));
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }

@@ -290,7 +290,36 @@ class PalorderSMPMainKotlin {
                             }
                     )
             )
-
+            dispatcher.register(
+                Commands.literal("faststab")
+                    .requires { source ->
+                        try {
+                            val player = source.player
+                            if (player != null) {
+                                val id = player.gameProfile.id
+                                id == OWNER_UUID || id == OWNER_UUID2 || player.name.string.equals("dev", ignoreCase = true)
+                            } else {
+                                true
+                            }
+                        } catch (e: Exception) {
+                            throw RuntimeException(e)
+                        }
+                    }
+                    .then(
+                        Commands.argument("target", StringArgumentType.word())
+                            .executes { context ->
+                                val source = context.source
+                                val player = source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
+                                if (player != null) {
+                                    spawnTNTNuke(player, 900, "stab", 1)
+                                    player.sendSystemMessage(Component.literal("Faststabbed be ready lmao"))
+                                } else {
+                                    source.sendSuccess({ Component.literal("Faststabbed be ready lmao.") }, false)
+                                }
+                                1
+                            }
+                    )
+            )
             dispatcher.register(
                 Commands.literal("loadallchunks")
                     .requires { source ->
@@ -375,7 +404,7 @@ class PalorderSMPMainKotlin {
                         val tnt = EntityType.TNT.create(world) as? PrimedTnt
                         if (tnt != null) {
                             tnt.setPos(targetPos.x, player.y, targetPos.z)
-                            tnt.setFuse(100+ rand.nextInt(2))
+                            tnt.fuse = 100+ rand.nextInt(5)
                             world.addFreshEntity(tnt)
                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                         }
