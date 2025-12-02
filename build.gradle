@@ -31,6 +31,9 @@ minecraft {
                 palordersmp {
                     source sourceSets.main
                 }
+                palordersmp_tweaked_kotlin_beta {
+                    source sourceSets.main
+                }
             }
         }
 
@@ -41,7 +44,10 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                palordersmp {
+                palordersmp_tweaked {
+                    source sourceSets.main
+                }
+                palordersmp_tweaked_kotlin_beta {
                     source sourceSets.main
                 }
             }
@@ -49,10 +55,13 @@ minecraft {
 
         data {
             workingDirectory project.file('run')
-            args '--mod', 'palordersmp', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            args '--mod', 'palordersmp_tweaked', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
 
             mods {
-                palordersmp {
+                palordersmp_tweaked {
+                    source sourceSets.main
+                }
+                palordersmp_tweaked_kotlin_beta {
                     source sourceSets.main
                 }
             }

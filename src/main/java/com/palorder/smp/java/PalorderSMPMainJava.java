@@ -136,7 +136,7 @@ public class PalorderSMPMainJava {
     public static final Map<UUID, Vec3> nukePlayerTeleportBack = new HashMap<>();
     public static final Map<ServerLevel, Set<ChunkPos>> pausedChunks = new HashMap<>();
     public static final Map<ServerLevel, Set<Entity>> nukeSpawnedEntities = new HashMap<>();
-
+    public static Random rand = new Random();
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
     private static final Logger log = LogManager.getLogger(PalorderSMPMainJava.class);
@@ -362,75 +362,62 @@ public class PalorderSMPMainJava {
         double spawnHeight = targetPos.y + 30;
         double layerStepY = 1.0;
         double spacing = 1.5;
-        Random rand = new Random();
 
         int totalTNT = (tnts != null && tnts > 0) ? tnts : 300;
+        int layersFinal = layers;
 
-        int playerChunkX = (int) player.getX() >> 4;
-        int playerChunkZ = (int) player.getZ() >> 4;
-        double tpX = (playerChunkX + 2) * 16 + 8;
-        double tpZ = (playerChunkZ + 2) * 16 + 8;
-        player.teleportTo(world, tpX, player.getY(), tpZ, player.getYRot(), player.getXRot());
+        world.getServer().execute(() -> {
+            int spawned = 0;
 
-        ChunkPos strikeChunk = new ChunkPos((int) targetPos.x >> 4, (int) targetPos.z >> 4);
-        if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
-            pausedChunks.computeIfAbsent(world, k -> new HashSet<>()).add(strikeChunk);
-        }
+            if ("stab".equals(type)) {
 
-        int spawned = 0;
-
-        if (type.equals("stab")) {
-
-            for (int i = 0; i < totalTNT; i++) {
-                PrimedTnt tnt = EntityType.TNT.create(world);
-                if (tnt != null) {
-                    tnt.setPos(targetPos.x, player.getY(), targetPos.z);
-                    tnt.setFuse(100);
-                    world.addFreshEntity(tnt);
-                    nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                for (int i = 0; i < totalTNT; i++) {
+                    PrimedTnt tnt = EntityType.TNT.create(world);
+                    if (tnt != null) {
+                        tnt.setPos(targetPos.x, targetPos.y, targetPos.z);
+                        tnt.setFuse(100 + rand.nextInt(2));
+                        world.addFreshEntity(tnt);
+                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                    }
                 }
-            }
 
-        } else if (type.equals("nuke")) {
+            } else if ("nuke".equals(type)) {
 
-            for (int layer = 0; layer < layers && spawned < totalTNT; layer++) {
+                for (int layer = 0; layer < layersFinal && spawned < totalTNT; layer++) {
 
-                double y = spawnHeight + layer * layerStepY;
+                    double y = spawnHeight + layer * layerStepY;
 
-                for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
+                    for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
 
-                    // PATCH: radius now increases with layer too (The multiplier is so fucked lmao)
-                    double radius = ring * 3.0 * (layer + 1);
+                        double radius = ring * 3.0 * (layer + 1);
+                        int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
 
-                    int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
+                        for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+                            double angle = 2 * Math.PI * i / tntInRing;
+                            double x = targetPos.x + Math.cos(angle) * radius;
+                            double z = targetPos.z + Math.sin(angle) * radius;
 
-                    for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
-
-                        double angle = 2 * Math.PI * i / tntInRing;
-                        double x = targetPos.x + Math.cos(angle) * radius;
-                        double z = targetPos.z + Math.sin(angle) * radius;
-
-                        PrimedTnt tnt = EntityType.TNT.create(world);
-                        if (tnt != null) {
-                            tnt.setPos(x, y, z);
-                            tnt.setFuse(100);
-                            world.addFreshEntity(tnt);
-                            nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
-                            spawned++;
+                            PrimedTnt tnt = EntityType.TNT.create(world);
+                            if (tnt != null) {
+                                tnt.setPos(x, y, z);
+                                tnt.setFuse(100);
+                                world.addFreshEntity(tnt);
+                                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                                spawned++;
+                            }
                         }
                     }
                 }
+
+            } else if (type == null) {
+                IllegalArgumentException ex = new IllegalArgumentException("type cant be nothing, how did you do this.");
+                logger.error("Invalid argument encountered", ex);
             }
 
-        } else if (type == null) {
-
-            IllegalArgumentException ex =
-                    new IllegalArgumentException("type cant be nothing, how did you do this.");
-            logger.error("Invalid argument encountered", ex);
-        }
-        player.sendSystemMessage(Component.literal(
-                "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type
-        ));
+            player.sendSystemMessage(Component.literal(
+                    "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type
+            ));
+        });
     }
 
     // ---------------- Derender TNT safely ----------------

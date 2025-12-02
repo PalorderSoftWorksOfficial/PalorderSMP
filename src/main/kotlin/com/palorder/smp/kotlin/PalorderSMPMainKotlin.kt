@@ -45,6 +45,7 @@ import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
 import net.minecraftforge.registries.RegistryObject
 import net.minecraftforge.fml.ModList
+import com.palorder.smp.java.PalorderSMPMainJava.rand
 import org.jetbrains.annotations.Nullable
 import com.electronwill.nightconfig.core.Config
 import com.electronwill.nightconfig.core.file.FileConfig
@@ -343,19 +344,18 @@ class PalorderSMPMainKotlin {
             val lookVec = player.lookAngle
             val end = eyePos.add(lookVec.scale(100000.0))
             val hitResult = world.clip(ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player))
-            val targetPos = hitResult?.location ?: end
+            val targetPos = hitResult.location ?: end
 
             nukePlayerTeleportBack[player.gameProfile.id] = player.position()
 
             val spawnHeight = targetPos.y + 30.0
             val layerStepY = 1.0
             val spacing = 1.5
-            val rand = Random()
 
             val totalTNT = if (tnts != null && tnts > 0) tnts else 300
 
-            val playerChunkX = player.x.toInt() shr 4
-            val playerChunkZ = player.z.toInt() shr 4
+            val playerChunkX = (player.x.toInt()) shr 4
+            val playerChunkZ = (player.z.toInt()) shr 4
             val tpX = (playerChunkX + 2) * 16 + 8.0
             val tpZ = (playerChunkZ + 2) * 16 + 8.0
             player.teleportTo(world, tpX, player.y, tpZ, player.yRot, player.xRot)
@@ -365,37 +365,38 @@ class PalorderSMPMainKotlin {
                 pausedChunks.computeIfAbsent(world) { HashSet() }.add(strikeChunk)
             }
 
-            var spawned = 0
+            val layersFinal = layers ?: 0
 
-            when {
-                type.equals("stab", ignoreCase = true) -> {
-                    for (i in 0 until totalTNT) {
-                        val tnt = EntityType.TNT.create(world)
+            world.server.execute {
+                var spawned = 0
+
+                if (type == "stab") {
+                    repeat(totalTNT) {
+                        val tnt = EntityType.TNT.create(world) as? PrimedTnt
                         if (tnt != null) {
                             tnt.setPos(targetPos.x, player.y, targetPos.z)
-                            tnt.fuse = 80
+                            tnt.setFuse(100+ rand.nextInt(2))
                             world.addFreshEntity(tnt)
                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                         }
                     }
-                }
-
-                type.equals("nuke", ignoreCase = true) -> {
-                    for (layer in 0 until (layers ?: 0)) {
+                } else if (type == "nuke") {
+                    for (layer in 0 until layersFinal) {
+                        if (spawned >= totalTNT) break
                         val y = spawnHeight + layer * layerStepY
                         for (ring in 1..5) {
                             if (spawned >= totalTNT) break
                             val radius = ring * 3.0 * (layer + 1)
-                            val tntInRing = Math.floor((2 * Math.PI * radius) / spacing).toInt()
+                            val tntInRing = Math.floor((2 * Math.PI * radius) / spacing).toInt().coerceAtLeast(1)
                             for (i in 0 until tntInRing) {
                                 if (spawned >= totalTNT) break
                                 val angle = 2 * Math.PI * i / tntInRing
                                 val x = targetPos.x + Math.cos(angle) * radius
                                 val z = targetPos.z + Math.sin(angle) * radius
-                                val tnt = EntityType.TNT.create(world)
+                                val tnt = EntityType.TNT.create(world) as? PrimedTnt
                                 if (tnt != null) {
                                     tnt.setPos(x, y, z)
-                                    tnt.fuse = 100
+                                    tnt.setFuse(100)
                                     world.addFreshEntity(tnt)
                                     nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                     spawned++
@@ -403,17 +404,13 @@ class PalorderSMPMainKotlin {
                             }
                         }
                     }
+                } else if (type == null) {
+                    val ex = IllegalArgumentException("type cant be nothing, how did you do this.")
+                    logger.error("Invalid argument encountered", ex)
                 }
 
-                type == null -> {
-                    val ex = IllegalArgumentException("type cant be nothing, how did you do this?????")
-                    logger.fatal("Invalid argument encountered", ex)
-                }
+                player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: $totalTNT, Type: $type"))
             }
-
-            player.sendSystemMessage(
-                Component.literal("Orbital strike launched! Total TNT: $totalTNT, Type: $type")
-            )
         }
 
         // ---------------- Derender TNT safely ----------------
