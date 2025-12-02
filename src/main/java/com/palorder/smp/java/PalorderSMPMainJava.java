@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -384,7 +385,7 @@ public class PalorderSMPMainJava {
                 PrimedTnt tnt = EntityType.TNT.create(world);
                 if (tnt != null) {
                     tnt.setPos(targetPos.x, player.getY(), targetPos.z);
-                    tnt.setFuse(60 + rand.nextInt(20));
+                    tnt.setFuse(100);
                     world.addFreshEntity(tnt);
                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                 }
@@ -412,7 +413,7 @@ public class PalorderSMPMainJava {
                         PrimedTnt tnt = EntityType.TNT.create(world);
                         if (tnt != null) {
                             tnt.setPos(x, y, z);
-                            tnt.setFuse(60 + rand.nextInt(20));
+                            tnt.setFuse(100);
                             world.addFreshEntity(tnt);
                             nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                             spawned++;
