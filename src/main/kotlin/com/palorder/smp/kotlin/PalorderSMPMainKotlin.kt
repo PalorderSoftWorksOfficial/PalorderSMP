@@ -68,6 +68,7 @@ import dan200.computercraft.api.filesystem.Mount
 import dan200.computercraft.api.filesystem.WritableMount
 import dan200.computercraft.api.detail.DetailProvider
 import dan200.computercraft.api.detail.DetailRegistry
+import net.minecraft.world.level.Explosion
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.nio.file.Files
@@ -76,6 +77,9 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.sin
 
 @Mod("palordersmp_tweaked_kotlin_beta")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked_kotlin_beta", value = [Dist.DEDICATED_SERVER], bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -103,6 +107,12 @@ class PalorderSMPMainKotlin {
             DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked_kotlin_beta")
         val BLOCK_ENTITIES: DeferredRegister<BlockEntityType<*>> =
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked_kotlin_beta")
+        val scheduled = HashMap<Int, MutableList<() -> Unit>>()
+
+        fun runLater(world: ServerLevel, ticks: Int, r: () -> Unit) {
+            val targetTick = (world.gameTime + ticks).toInt()
+            scheduled.computeIfAbsent(targetTick) { ArrayList() }.add(r)
+        }
 
         val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java)
 
@@ -150,6 +160,15 @@ class PalorderSMPMainKotlin {
         @SubscribeEvent
         fun onServerStopping(event: ServerStoppingEvent) {
             scheduler.shutdown()
+        }
+        @JvmStatic
+        @SubscribeEvent
+        fun onServerTick(e: TickEvent.ServerTickEvent) {
+            if (e.phase != TickEvent.Phase.END) return
+            val world = e.server.overworld()
+            val time = world.gameTime.toInt()
+            val list = scheduled.remove(time)
+            list?.forEach { it.invoke() }
         }
 
         // ---------------- Commands ----------------
@@ -366,79 +385,112 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Nuke Spawn ----------------
         @JvmStatic
-        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int?) {
+        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int) {
             val world = player.level() as ServerLevel
 
             val eyePos = player.getEyePosition(1.0f)
             val lookVec = player.lookAngle
-            val end = eyePos.add(lookVec.scale(100000.0))
-            val hitResult = world.clip(ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player))
-            val targetPos = hitResult.location ?: end
+            val end = eyePos.add(lookVec.scale(100_000.0))
+            val hitResult = world.clip(ClipContext(
+                eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
+            ))
+            val targetPos = hitResult?.location ?: end
 
             nukePlayerTeleportBack[player.gameProfile.id] = player.position()
-
-            val spawnHeight = targetPos.y + 30.0
+            val extraExplosions = 0
+            val spawnHeight = targetPos.y + 30
             val layerStepY = 1.0
             val spacing = 1.5
 
             val totalTNT = if (tnts != null && tnts > 0) tnts else 300
-
-            val playerChunkX = (player.x.toInt()) shr 4
-            val playerChunkZ = (player.z.toInt()) shr 4
-            val tpX = (playerChunkX + 2) * 16 + 8.0
-            val tpZ = (playerChunkZ + 2) * 16 + 8.0
-            player.teleportTo(world, tpX, player.y, tpZ, player.yRot, player.xRot)
-
-            val strikeChunk = ChunkPos((targetPos.x.toInt()) shr 4, (targetPos.z.toInt()) shr 4)
-            if (playerChunkX == strikeChunk.x && playerChunkZ == strikeChunk.z) {
-                pausedChunks.computeIfAbsent(world) { HashSet() }.add(strikeChunk)
-            }
-
-            val layersFinal = layers ?: 0
+            val layersFinal = layers
 
             world.server.execute {
                 var spawned = 0
 
-                if (type == "stab") {
-                    repeat(totalTNT) {
-                        val tnt = EntityType.TNT.create(world) as? PrimedTnt
-                        if (tnt != null) {
-                            tnt.setPos(targetPos.x, player.y, targetPos.z)
-                            tnt.fuse = 100+ rand.nextInt(5)
-                            world.addFreshEntity(tnt)
-                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                when (type) {
+                    "stab" -> {
+                        repeat(totalTNT) {
+                            val tnt = EntityType.TNT.create(world)
+                            if (tnt != null) {
+                                tnt.setPos(targetPos.x, targetPos.y, targetPos.z)
+                                tnt.fuse = 100 + rand.nextInt(5)
+                                world.addFreshEntity(tnt)
+                                nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                            }
                         }
                     }
-                } else if (type == "nuke") {
-                    for (layer in 0 until layersFinal) {
-                        if (spawned >= totalTNT) break
-                        val y = spawnHeight + layer * layerStepY
-                        for (ring in 1..5) {
+
+                    "nuke" -> {
+                        for (layer in 0 until layersFinal) {
                             if (spawned >= totalTNT) break
-                            val radius = ring * 3.0 * (layer + 1)
-                            val tntInRing = Math.floor((2 * Math.PI * radius) / spacing).toInt().coerceAtLeast(1)
-                            for (i in 0 until tntInRing) {
+                            val y = spawnHeight + layer * layerStepY
+
+                            for (ring in 1..5) {
                                 if (spawned >= totalTNT) break
-                                val angle = 2 * Math.PI * i / tntInRing
-                                val x = targetPos.x + Math.cos(angle) * radius
-                                val z = targetPos.z + Math.sin(angle) * radius
-                                val tnt = EntityType.TNT.create(world) as? PrimedTnt
-                                if (tnt != null) {
-                                    tnt.setPos(x, y, z)
-                                    tnt.setFuse(100)
-                                    world.addFreshEntity(tnt)
-                                    nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
-                                    spawned++
+                                val radius = ring * 3.0 * (layer + 1)
+                                val tntInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
+
+                                for (i in 0 until tntInRing) {
+                                    if (spawned >= totalTNT) break
+                                    val angle = 2 * Math.PI * i / tntInRing
+                                    val x = targetPos.x + kotlin.math.cos(angle) * radius
+                                    val z = targetPos.z + kotlin.math.sin(angle) * radius
+
+                                    val tnt = EntityType.TNT.create(world)
+                                    if (tnt != null) {
+                                        tnt.setPos(x, y, z)
+                                        tnt.fuse = 100
+                                        world.addFreshEntity(tnt)
+                                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                        spawned++
+                                    }
+                                }
+                            }
+                        }
+
+                        val extraCount = totalTNT * extraExplosions
+                        var extraSpawned = 0
+                        for (layer in 0 until layersFinal) {
+                            if (extraSpawned >= extraCount) break
+                            val y = spawnHeight + layer * layerStepY
+
+                            for (ring in 1..5) {
+                                if (extraSpawned >= extraCount) break
+                                val radius = ring * 3.0 * (layer + 1)
+                                val explosionsInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
+
+                                for (i in 0 until explosionsInRing) {
+                                    if (extraSpawned >= extraCount) break
+                                    val angle = 2 * Math.PI * i / explosionsInRing
+                                    val x = targetPos.x + kotlin.math.cos(angle) * radius
+                                    val z = targetPos.z + kotlin.math.sin(angle) * radius
+
+                                    val fx = x
+                                    val fy = y
+                                    val fz = z
+
+                                    runLater(world, 0) {
+                                        world.explode(null, fx, fy, fz, 5.0f, Level.ExplosionInteraction.TNT)
+                                    }
+
+                                    extraSpawned++
                                 }
                             }
                         }
                     }
-                } else if (type == null) {
-                    val ex = IllegalArgumentException("type cant be nothing, how did you do this.")
-                    logger.error("Invalid argument encountered", ex)
+
+                    null -> {
+                        val ex = IllegalArgumentException("type cant be nothing, how did you do this.")
+                        logger.error("Invalid argument encountered", ex)
+                    }
                 }
 
-                player.sendSystemMessage(Component.literal("Orbital strike launched! Total TNT: $totalTNT, Type: $type"))
+                player.sendSystemMessage(
+                    Component.literal(
+                        "Orbital strike launched! Total TNT: $totalTNT, Type: $type, Extra explosions: ${totalTNT * extraExplosions}"
+                    )
+                )
             }
         }
 

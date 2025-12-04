@@ -23,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.chunk.ChunkStatus;
@@ -121,7 +122,12 @@ public class PalorderSMPMainJava {
             DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked");
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked");
+    public static final Map<Integer, List<Runnable>> scheduled = new HashMap<>();
 
+    public static void runLater(ServerLevel world, int ticks, Runnable r) {
+        int targetTick = (int) (world.getGameTime() + ticks);
+        scheduled.computeIfAbsent(targetTick, k -> new ArrayList<>()).add(r);
+    }
 
 
     public static final Logger logger = LogManager.getLogger(PalorderSMPMainJava.class);
@@ -180,6 +186,14 @@ public class PalorderSMPMainJava {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         scheduler.shutdown();
+    }
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent e) {
+        if (e.phase != TickEvent.Phase.END) return;
+
+        long time = e.getServer().overworld().getGameTime();
+        List<Runnable> list = scheduled.remove((int) time);
+        if (list != null) for (Runnable r : list) r.run();
     }
 
     // ---------------- Commands ----------------
@@ -385,7 +399,7 @@ public class PalorderSMPMainJava {
         Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
-
+        int extraExplosions = 0;
         double spawnHeight = targetPos.y + 30;
         double layerStepY = 1.0;
         double spacing = 1.5;
@@ -397,7 +411,6 @@ public class PalorderSMPMainJava {
             int spawned = 0;
 
             if ("stab".equals(type)) {
-
                 for (int i = 0; i < totalTNT; i++) {
                     PrimedTnt tnt = EntityType.TNT.create(world);
                     if (tnt != null) {
@@ -411,11 +424,9 @@ public class PalorderSMPMainJava {
             } else if ("nuke".equals(type)) {
 
                 for (int layer = 0; layer < layersFinal && spawned < totalTNT; layer++) {
-
                     double y = spawnHeight + layer * layerStepY;
 
                     for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
-
                         double radius = ring * 3.0 * (layer + 1);
                         int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
 
@@ -436,13 +447,41 @@ public class PalorderSMPMainJava {
                     }
                 }
 
+                int extraCount = totalTNT * extraExplosions;
+                int extraSpawned = 0;
+                for (int layer = 0; layer < layersFinal && extraSpawned < extraCount; layer++) {
+                    double y = spawnHeight + layer * layerStepY;
+
+                    for (int ring = 1; extraSpawned < extraCount && ring <= 5; ring++) {
+                        double radius = ring * 3.0 * (layer + 1);
+                        int explosionsInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
+
+                        for (int i = 0; i < explosionsInRing && extraSpawned < extraCount; i++) {
+                            double angle = 2 * Math.PI * i / explosionsInRing;
+                            double x = targetPos.x + Math.cos(angle) * radius;
+                            double z = targetPos.z + Math.sin(angle) * radius;
+
+                            double fx = x;
+                            double fz = z;
+                            double fy = y;
+
+                            runLater(world, 0, () -> {
+                                world.explode(null, fx, fy, fz, 5.0f, Level.ExplosionInteraction.TNT);
+                            });
+
+                            extraSpawned++;
+                        }
+                    }
+                }
+
             } else if (type == null) {
                 IllegalArgumentException ex = new IllegalArgumentException("type cant be nothing, how did you do this.");
                 logger.error("Invalid argument encountered", ex);
             }
 
             player.sendSystemMessage(Component.literal(
-                    "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type
+                    "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type +
+                            ", Extra explosions: " + (totalTNT * extraExplosions)
             ));
         });
     }
