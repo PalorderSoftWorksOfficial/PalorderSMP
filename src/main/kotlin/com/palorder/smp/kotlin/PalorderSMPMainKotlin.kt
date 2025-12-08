@@ -385,96 +385,107 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Nuke Spawn ----------------
         @JvmStatic
-        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int) {
+        fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int?) {
             val world = player.level() as ServerLevel
-
-            val eyePos = player.getEyePosition(1.0f)
+            val eyePos = player.eyePosition
             val lookVec = player.lookAngle
-            val end = eyePos.add(lookVec.scale(100_000.0))
-            val hitResult = world.clip(ClipContext(
-                eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
-            ))
+            val end = eyePos.add(lookVec.scale(100000.0))
+            val hitResult = world.clip(ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player))
             val targetPos = hitResult?.location ?: end
 
             nukePlayerTeleportBack[player.gameProfile.id] = player.position()
-            val extraExplosions = 0
-            val spawnHeight = targetPos.y + 30
-            val layerStepY = 1.0
-            val spacing = 1.5
-
-            val totalTNT = if (tnts != null && tnts > 0) tnts else 300
-            val layersFinal = layers
+            val total = tnts?.takeIf { it > 0 } ?: 300
+            val layersFinal = layers ?: 0
 
             world.server.execute {
-                var spawned = 0
-
                 when (type) {
                     "stab" -> {
-                        repeat(totalTNT) {
-                            val tnt = EntityType.TNT.create(world)
+                        var y = targetPos.y + 30.0
+                        val minY = world.minBuildHeight.toDouble()
+                        var count = 0
+                        while (y >= minY && count < total) {
+                            val tnt = EntityType.TNT.create(world) as? PrimedTnt
                             if (tnt != null) {
-                                tnt.setPos(targetPos.x, targetPos.y, targetPos.z)
+                                tnt.setPos(targetPos.x, y, targetPos.z)
                                 tnt.fuse = 100 + rand.nextInt(5)
+                                tnt.isNoGravity = true
+                                tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                 world.addFreshEntity(tnt)
                                 nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                            }
+                            y -= 1.0
+                            count++
+                        }
+                    }
+
+                    "chunkdel" -> {
+                        val chunkX = (targetPos.x.toInt()) shr 4
+                        val chunkZ = (targetPos.z.toInt()) shr 4
+                        val minY = world.minBuildHeight
+                        val maxY = world.maxBuildHeight
+                        for (cx in (chunkX shl 4) until (chunkX shl 4) + 16) {
+                            for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16) {
+                                for (y in maxY - 1 downTo minY) {
+                                    val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                    if (tnt != null) {
+                                        tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5)
+                                        tnt.setFuse(60)
+                                        tnt.setNoGravity(true)
+                                        tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                        world.addFreshEntity(tnt)
+                                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    "chunklaser" -> {
+                        val chunkX = (targetPos.x.toInt()) shr 4
+                        val chunkZ = (targetPos.z.toInt()) shr 4
+                        val y0 = targetPos.y.toInt()
+                        for (cx in (chunkX shl 4) until (chunkX shl 4) + 16) {
+                            for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16) {
+                                val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                if (tnt != null) {
+                                    tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5)
+                                    tnt.setFuse(60)
+                                    tnt.setNoGravity(true)
+                                    tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                    world.addFreshEntity(tnt)
+                                    nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                }
                             }
                         }
                     }
 
                     "nuke" -> {
+                        val spawnHeight = targetPos.y + 30.0
+                        val layerStepY = 1.0
+                        val spacing = 1.5
+                        var spawned = 0
                         for (layer in 0 until layersFinal) {
-                            if (spawned >= totalTNT) break
+                            if (spawned >= total) break
                             val y = spawnHeight + layer * layerStepY
-
                             for (ring in 1..5) {
-                                if (spawned >= totalTNT) break
+                                if (spawned >= total) break
                                 val radius = ring * 3.0 * (layer + 1)
-                                val tntInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
-
-                                for (i in 0 until tntInRing) {
-                                    if (spawned >= totalTNT) break
-                                    val angle = 2 * Math.PI * i / tntInRing
+                                val tntsInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
+                                for (i in 0 until tntsInRing) {
+                                    if (spawned >= total) break
+                                    val angle = 2 * Math.PI * i / tntsInRing
                                     val x = targetPos.x + kotlin.math.cos(angle) * radius
                                     val z = targetPos.z + kotlin.math.sin(angle) * radius
-
-                                    val tnt = EntityType.TNT.create(world)
+                                    val tnt = EntityType.TNT.create(world) as? PrimedTnt
                                     if (tnt != null) {
                                         tnt.setPos(x, y, z)
-                                        tnt.fuse = 100
+                                        tnt.setFuse(100)
+                                        tnt.setNoGravity(false)
+                                        tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                         world.addFreshEntity(tnt)
                                         nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                         spawned++
                                     }
-                                }
-                            }
-                        }
-
-                        val extraCount = totalTNT * extraExplosions
-                        var extraSpawned = 0
-                        for (layer in 0 until layersFinal) {
-                            if (extraSpawned >= extraCount) break
-                            val y = spawnHeight + layer * layerStepY
-
-                            for (ring in 1..5) {
-                                if (extraSpawned >= extraCount) break
-                                val radius = ring * 3.0 * (layer + 1)
-                                val explosionsInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
-
-                                for (i in 0 until explosionsInRing) {
-                                    if (extraSpawned >= extraCount) break
-                                    val angle = 2 * Math.PI * i / explosionsInRing
-                                    val x = targetPos.x + kotlin.math.cos(angle) * radius
-                                    val z = targetPos.z + kotlin.math.sin(angle) * radius
-
-                                    val fx = x
-                                    val fy = y
-                                    val fz = z
-
-                                    runLater(world, 0) {
-                                        world.explode(null, fx, fy, fz, 5.0f, Level.ExplosionInteraction.TNT)
-                                    }
-
-                                    extraSpawned++
                                 }
                             }
                         }
@@ -486,11 +497,7 @@ class PalorderSMPMainKotlin {
                     }
                 }
 
-                player.sendSystemMessage(
-                    Component.literal(
-                        "Orbital strike launched! Total TNT: $totalTNT, Type: $type, Extra explosions: ${totalTNT * extraExplosions}"
-                    )
-                )
+                player.sendSystemMessage(Component.literal("Orbital strike launched! Type: $type, Total: $total"))
             }
         }
 

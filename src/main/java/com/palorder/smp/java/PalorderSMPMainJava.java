@@ -389,56 +389,93 @@ public class PalorderSMPMainJava {
     // ---------------- Nuke Spawn ----------------
     public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type, Integer layers) {
         ServerLevel world = (ServerLevel) player.level();
-
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
         Vec3 end = eyePos.add(lookVec.scale(100000.0));
-        BlockHitResult hitResult = world.clip(new ClipContext(
-                eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player
-        ));
+        BlockHitResult hitResult = world.clip(new ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
-        int extraExplosions = 0;
-        double spawnHeight = targetPos.y + 30;
-        double layerStepY = 1.0;
-        double spacing = 1.5;
-
-        int totalTNT = (tnts != null && tnts > 0) ? tnts : 300;
-        int layersFinal = layers;
-
+        int total = (tnts != null && tnts > 0) ? tnts : 300;
+        int layersFinal = (layers != null) ? layers : 0;
         world.getServer().execute(() -> {
-            int spawned = 0;
-
             if ("stab".equals(type)) {
-                for (int i = 0; i < totalTNT; i++) {
+                double y = targetPos.y + 30;
+                double minY = world.getMinBuildHeight();
+                int count = 0;
+                while (y >= minY && count < total) {
                     PrimedTnt tnt = EntityType.TNT.create(world);
                     if (tnt != null) {
-                        tnt.setPos(targetPos.x, targetPos.y, targetPos.z);
+                        tnt.setPos(targetPos.x, y, targetPos.z);
                         tnt.setFuse(100 + rand.nextInt(5));
+                        tnt.setNoGravity(true);
+                        tnt.setDeltaMovement(0.0, 0.0, 0.0);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                    }
+                    y -= 1.0;
+                    count++;
+                }
+
+            } else if ("chunkdel".equals(type)) {
+                int chunkX = ((int) targetPos.x) >> 4;
+                int chunkZ = ((int) targetPos.z) >> 4;
+                int minY = world.getMinBuildHeight();
+                int maxY = world.getMaxBuildHeight();
+                for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx++) {
+                    for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz++) {
+                        for (int y = maxY - 1; y >= minY; y--) {
+                            PrimedTnt tnt = EntityType.TNT.create(world);
+                            if (tnt != null) {
+                                tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5);
+                                tnt.setFuse(60);
+                                tnt.setNoGravity(true);
+                                tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                                world.addFreshEntity(tnt);
+                                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                            }
+                        }
+                    }
+                }
+
+            } else if ("chunklaser".equals(type)) {
+                int chunkX = ((int) targetPos.x) >> 4;
+                int chunkZ = ((int) targetPos.z) >> 4;
+                int y0 = (int) targetPos.y;
+                for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx++) {
+                    for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz++) {
+                        PrimedTnt tnt = EntityType.TNT.create(world);
+                        if (tnt != null) {
+                            tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5);
+                            tnt.setFuse(60);
+                            tnt.setNoGravity(true);
+                            tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                            world.addFreshEntity(tnt);
+                            nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                        }
                     }
                 }
 
             } else if ("nuke".equals(type)) {
-
-                for (int layer = 0; layer < layersFinal && spawned < totalTNT; layer++) {
+                double spawnHeight = targetPos.y + 30;
+                double layerStepY = 1.0;
+                double spacing = 1.5;
+                int spawned = 0;
+                for (int layer = 0; layer < layersFinal && spawned < total; layer++) {
                     double y = spawnHeight + layer * layerStepY;
-
-                    for (int ring = 1; spawned < totalTNT && ring <= 5; ring++) {
+                    for (int ring = 1; spawned < total && ring <= 5; ring++) {
                         double radius = ring * 3.0 * (layer + 1);
                         int tntInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
-
-                        for (int i = 0; i < tntInRing && spawned < totalTNT; i++) {
+                        for (int i = 0; i < tntInRing && spawned < total; i++) {
                             double angle = 2 * Math.PI * i / tntInRing;
                             double x = targetPos.x + Math.cos(angle) * radius;
                             double z = targetPos.z + Math.sin(angle) * radius;
-
                             PrimedTnt tnt = EntityType.TNT.create(world);
                             if (tnt != null) {
                                 tnt.setPos(x, y, z);
                                 tnt.setFuse(100);
+                                tnt.setNoGravity(false);
+                                tnt.setDeltaMovement(0.0, 0.0, 0.0);
                                 world.addFreshEntity(tnt);
                                 nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                                 spawned++;
@@ -446,43 +483,9 @@ public class PalorderSMPMainJava {
                         }
                     }
                 }
-
-                int extraCount = totalTNT * extraExplosions;
-                int extraSpawned = 0;
-                for (int layer = 0; layer < layersFinal && extraSpawned < extraCount; layer++) {
-                    double y = spawnHeight + layer * layerStepY;
-
-                    for (int ring = 1; extraSpawned < extraCount && ring <= 5; ring++) {
-                        double radius = ring * 3.0 * (layer + 1);
-                        int explosionsInRing = (int) Math.floor((2 * Math.PI * radius) / spacing);
-
-                        for (int i = 0; i < explosionsInRing && extraSpawned < extraCount; i++) {
-                            double angle = 2 * Math.PI * i / explosionsInRing;
-                            double x = targetPos.x + Math.cos(angle) * radius;
-                            double z = targetPos.z + Math.sin(angle) * radius;
-
-                            double fx = x;
-                            double fz = z;
-                            double fy = y;
-
-                            runLater(world, 0, () -> {
-                                world.explode(null, fx, fy, fz, 5.0f, Level.ExplosionInteraction.TNT);
-                            });
-
-                            extraSpawned++;
-                        }
-                    }
-                }
-
-            } else if (type == null) {
-                IllegalArgumentException ex = new IllegalArgumentException("type cant be nothing, how did you do this.");
-                logger.error("Invalid argument encountered", ex);
             }
 
-            player.sendSystemMessage(Component.literal(
-                    "Orbital strike launched! Total TNT: " + totalTNT + ", Type: " + type +
-                            ", Extra explosions: " + (totalTNT * extraExplosions)
-            ));
+            player.sendSystemMessage(Component.literal("Orbital strike launched! Type: " + type + ", Total: " + total));
         });
     }
 
@@ -503,7 +506,7 @@ public class PalorderSMPMainJava {
         if (entities == null || entities.isEmpty()) return;
 
         Iterator<Entity> iterator = entities.iterator();
-        int processedPerTick = 100; // adjustable for server performance
+        int processedPerTick = 100;
         int count = 0;
 
         while (iterator.hasNext() && count < processedPerTick) {
@@ -516,7 +519,6 @@ public class PalorderSMPMainJava {
             }
         }
 
-        // Clean up empty maps
         if (entities.isEmpty()) nukeSpawnedEntities.remove(world);
         if (frozen.isEmpty()) pausedChunks.remove(world);
     }
