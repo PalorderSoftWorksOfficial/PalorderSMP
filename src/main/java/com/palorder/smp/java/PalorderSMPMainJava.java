@@ -463,7 +463,7 @@ public class PalorderSMPMainJava {
                     PrimedTnt tnt = EntityType.TNT.create(world);
                     if (tnt != null) {
                         tnt.setPos(targetPos.x, y, targetPos.z);
-                        tnt.setFuse(100 + rand.nextInt(5));
+                        tnt.setFuse(0);
                         tnt.setNoGravity(true);
                         tnt.setDeltaMovement(0.0, 0.0, 0.0);
                         world.addFreshEntity(tnt);
@@ -491,7 +491,7 @@ public class PalorderSMPMainJava {
                                 PrimedTnt tnt = EntityType.TNT.create(world);
                                 if (tnt != null) {
                                     tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5);
-                                    tnt.setFuse(60);
+                                    tnt.setFuse(0);
                                     tnt.setNoGravity(true);
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0);
                                     world.addFreshEntity(tnt);
@@ -517,7 +517,7 @@ public class PalorderSMPMainJava {
                         PrimedTnt tnt = EntityType.TNT.create(world);
                         if (tnt != null) {
                             tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5);
-                            tnt.setFuse(60);
+                            tnt.setFuse(0);
                             tnt.setNoGravity(true);
                             tnt.setDeltaMovement(0.0, 0.0, 0.0);
                             world.addFreshEntity(tnt);

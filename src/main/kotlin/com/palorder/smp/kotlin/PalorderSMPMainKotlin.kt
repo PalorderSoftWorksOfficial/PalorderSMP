@@ -470,7 +470,7 @@ class PalorderSMPMainKotlin {
                             val tnt = EntityType.TNT.create(world) as? PrimedTnt
                             if (tnt != null) {
                                 tnt.setPos(targetPos.x, y, targetPos.z)
-                                tnt.fuse = 100 + rand.nextInt(5)
+                                tnt.fuse = 0
                                 tnt.isNoGravity = true
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                 world.addFreshEntity(tnt)
@@ -499,7 +499,7 @@ class PalorderSMPMainKotlin {
                                         val tnt = EntityType.TNT.create(world) as? PrimedTnt
                                         if (tnt != null) {
                                             tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5)
-                                            tnt.setFuse(60)
+                                            tnt.setFuse(0)
                                             tnt.setNoGravity(true)
                                             tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                             world.addFreshEntity(tnt)
@@ -527,7 +527,7 @@ class PalorderSMPMainKotlin {
                                 val tnt = EntityType.TNT.create(world) as? PrimedTnt
                                 if (tnt != null) {
                                     tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5)
-                                    tnt.setFuse(60)
+                                    tnt.setFuse(0)
                                     tnt.setNoGravity(true)
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                     world.addFreshEntity(tnt)
