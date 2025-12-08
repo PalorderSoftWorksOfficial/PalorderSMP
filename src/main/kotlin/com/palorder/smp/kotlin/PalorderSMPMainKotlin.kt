@@ -68,6 +68,7 @@ import dan200.computercraft.api.filesystem.Mount
 import dan200.computercraft.api.filesystem.WritableMount
 import dan200.computercraft.api.detail.DetailProvider
 import dan200.computercraft.api.detail.DetailRegistry
+import net.minecraft.core.BlockPos
 import net.minecraft.world.level.Explosion
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -79,6 +80,8 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sin
 
 @Mod("palordersmp_tweaked_kotlin_beta")
@@ -252,7 +255,7 @@ class PalorderSMPMainKotlin {
                                     .then(
                                         Commands.argument("type", StringArgumentType.string())
                                             .suggests { _, builder ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab"), builder)
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab","chunkdel","chunklaser"), builder)
                                             }
                                             .then(
                                                 Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
@@ -334,6 +337,66 @@ class PalorderSMPMainKotlin {
                                     player.sendSystemMessage(Component.literal("Faststabbed be ready lmao"))
                                 } else {
                                     source.sendSuccess({ Component.literal("Faststabbed be ready lmao.") }, false)
+                                }
+                                1
+                            }
+                    )
+            )
+            dispatcher.register(
+                Commands.literal("fastchunklaser")
+                    .requires { source ->
+                        try {
+                            val player = source.player
+                            if (player != null) {
+                                val id = player.gameProfile.id
+                                id == OWNER_UUID || id == OWNER_UUID2 || player.name.string.equals("dev", ignoreCase = true)
+                            } else {
+                                true
+                            }
+                        } catch (e: Exception) {
+                            throw RuntimeException(e)
+                        }
+                    }
+                    .then(
+                        Commands.argument("target", StringArgumentType.word())
+                            .executes { context ->
+                                val source = context.source
+                                val player = source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
+                                if (player != null) {
+                                    spawnTNTNuke(player, 256, "chunklaser", 1)
+                                    player.sendSystemMessage(Component.literal("Fastchunklaser be ready lmao"))
+                                } else {
+                                    source.sendSuccess({ Component.literal("Fastchunklaser be ready lmao.") }, false)
+                                }
+                                1
+                            }
+                    )
+            )
+            dispatcher.register(
+                Commands.literal("fastchunkdel")
+                    .requires { source ->
+                        try {
+                            val player = source.player
+                            if (player != null) {
+                                val id = player.gameProfile.id
+                                id == OWNER_UUID || id == OWNER_UUID2 || player.name.string.equals("dev", ignoreCase = true)
+                            } else {
+                                true
+                            }
+                        } catch (e: Exception) {
+                            throw RuntimeException(e)
+                        }
+                    }
+                    .then(
+                        Commands.argument("target", StringArgumentType.word())
+                            .executes { context ->
+                                val source = context.source
+                                val player = source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
+                                if (player != null) {
+                                    spawnTNTNuke(player, 49152, "chunkdel", 1)
+                                    player.sendSystemMessage(Component.literal("Fastchunkdel be ready lmao"))
+                                } else {
+                                    source.sendSuccess({ Component.literal("Fastchunkdel be ready lmao.") }, false)
                                 }
                                 1
                             }
@@ -423,29 +486,44 @@ class PalorderSMPMainKotlin {
                         val chunkZ = (targetPos.z.toInt()) shr 4
                         val minY = world.minBuildHeight
                         val maxY = world.maxBuildHeight
-                        for (cx in (chunkX shl 4) until (chunkX shl 4) + 16) {
-                            for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16) {
-                                for (y in maxY - 1 downTo minY) {
-                                    val tnt = EntityType.TNT.create(world) as? PrimedTnt
-                                    if (tnt != null) {
-                                        tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5)
-                                        tnt.setFuse(60)
-                                        tnt.setNoGravity(true)
-                                        tnt.setDeltaMovement(0.0, 0.0, 0.0)
-                                        world.addFreshEntity(tnt)
-                                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+
+                        var placed = 0
+                        val spacing = max(1, ((16 * 16 * (maxY - minY)) / total.toDouble()).pow(1.0 / 3).toInt())
+
+                        for (y in maxY - 1 downTo minY step spacing) {
+                            for (cx in (chunkX shl 4) until (chunkX shl 4) + 16 step spacing) {
+                                for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16 step spacing) {
+                                    if (placed >= total) break
+                                    val state = world.getBlockState(BlockPos(cx, y, cz))
+                                    if (!state.isAir) {
+                                        val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                        if (tnt != null) {
+                                            tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5)
+                                            tnt.setFuse(60)
+                                            tnt.setNoGravity(true)
+                                            tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                            world.addFreshEntity(tnt)
+                                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                            placed++
+                                        }
                                     }
                                 }
                             }
                         }
                     }
 
+
                     "chunklaser" -> {
                         val chunkX = (targetPos.x.toInt()) shr 4
                         val chunkZ = (targetPos.z.toInt()) shr 4
                         val y0 = targetPos.y.toInt()
-                        for (cx in (chunkX shl 4) until (chunkX shl 4) + 16) {
-                            for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16) {
+
+                        var placed = 0
+                        val spacing = max(1, (16 * 16 / total.toDouble()).pow(0.5).toInt())
+
+                        for (cx in (chunkX shl 4) until (chunkX shl 4) + 16 step spacing) {
+                            for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16 step spacing) {
+                                if (placed >= total) break
                                 val tnt = EntityType.TNT.create(world) as? PrimedTnt
                                 if (tnt != null) {
                                     tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5)
@@ -454,10 +532,12 @@ class PalorderSMPMainKotlin {
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                     world.addFreshEntity(tnt)
                                     nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                    placed++
                                 }
                             }
                         }
                     }
+
 
                     "nuke" -> {
                         val spawnHeight = targetPos.y + 30.0

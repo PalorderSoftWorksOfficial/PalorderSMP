@@ -265,7 +265,7 @@ public class PalorderSMPMainJava {
                         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
                                 .then(Commands.argument("type", StringArgumentType.string())
                                         .suggests((ctx, builder) ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab"), builder))
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel"), builder))
                                         .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                                 .executes(context -> {
                                                     CommandSourceStack source = context.getSource();
@@ -274,7 +274,7 @@ public class PalorderSMPMainJava {
                                                     int tntCount = IntegerArgumentType.getInteger(context, "amount");
                                                     String type = StringArgumentType.getString(context, "type");
                                                     int layers = IntegerArgumentType.getInteger(context, "layers");
-                                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab")) type = "nuke";
+                                                    if (!type.equalsIgnoreCase("nuke") && !type.equalsIgnoreCase("stab") && !type.equalsIgnoreCase("chunklaser") && !type.equalsIgnoreCase("chunkdel")) type = "nuke";
                                                     if (nukePendingConfirmation.remove(player.getGameProfile().getId()))
                                                         spawnTNTNuke(player, tntCount, type, layers);
                                                     return 1;
@@ -332,6 +332,62 @@ public class PalorderSMPMainJava {
                             }
                             else {
                                 context.getSource().sendSuccess(() -> Component.literal("Faststabbed be ready lmao."), false);
+                            }
+                            return 1;
+                        }))
+        );
+        dispatcher.register(Commands.literal("fastchunklaser")
+                .requires(source -> {
+                    try {
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(context -> {
+                            CommandSourceStack source = context.getSource();
+                            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (player != null) {
+                                spawnTNTNuke(player, 256, "chunklaser", 1);
+                                player.sendSystemMessage(Component.literal("Fastchunklasered be ready lmao"));
+                            }
+                            else {
+                                context.getSource().sendSuccess(() -> Component.literal("Fastchunklasered be ready lmao."), false);
+                            }
+                            return 1;
+                        }))
+        );
+        dispatcher.register(Commands.literal("fastchunkdel")
+                .requires(source -> {
+                    try {
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(context -> {
+                            CommandSourceStack source = context.getSource();
+                            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
+                            if (player != null) {
+                                spawnTNTNuke(player, 49152, "chunkdel", 1);
+                                player.sendSystemMessage(Component.literal("fastchunkdeleted be ready lmao"));
+                            }
+                            else {
+                                context.getSource().sendSuccess(() -> Component.literal("fastchunkdeleted be ready lmao."), false);
                             }
                             return 1;
                         }))
@@ -396,7 +452,7 @@ public class PalorderSMPMainJava {
         Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
 
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
-        int total = (tnts != null && tnts > 0) ? tnts : 300;
+        int total = (tnts != null && tnts > 0) ? tnts : 1;
         int layersFinal = (layers != null) ? layers : 0;
         world.getServer().execute(() -> {
             if ("stab".equals(type)) {
@@ -417,33 +473,47 @@ public class PalorderSMPMainJava {
                     count++;
                 }
 
-            } else if ("chunkdel".equals(type)) {
+            }
+            else if ("chunkdel".equals(type)) {
                 int chunkX = ((int) targetPos.x) >> 4;
                 int chunkZ = ((int) targetPos.z) >> 4;
                 int minY = world.getMinBuildHeight();
                 int maxY = world.getMaxBuildHeight();
-                for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx++) {
-                    for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz++) {
-                        for (int y = maxY - 1; y >= minY; y--) {
-                            PrimedTnt tnt = EntityType.TNT.create(world);
-                            if (tnt != null) {
-                                tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5);
-                                tnt.setFuse(60);
-                                tnt.setNoGravity(true);
-                                tnt.setDeltaMovement(0.0, 0.0, 0.0);
-                                world.addFreshEntity(tnt);
-                                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+
+                int placed = 0;
+                double spacing = Math.max(1.0, Math.cbrt((16 * 16 * (maxY - minY)) / (double) total));
+
+                for (int y = minY; y < maxY; y += spacing) {
+                    for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx += spacing) {
+                        for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
+                            BlockState state = world.getBlockState(new BlockPos(cx, y, cz));
+                            if (!state.isAir()) {
+                                PrimedTnt tnt = EntityType.TNT.create(world);
+                                if (tnt != null) {
+                                    tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5);
+                                    tnt.setFuse(60);
+                                    tnt.setNoGravity(true);
+                                    tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                                    world.addFreshEntity(tnt);
+                                    nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                                    placed++;
+                                }
                             }
                         }
                     }
                 }
-
-            } else if ("chunklaser".equals(type)) {
+            }
+            else if ("chunklaser".equals(type)) {
                 int chunkX = ((int) targetPos.x) >> 4;
                 int chunkZ = ((int) targetPos.z) >> 4;
                 int y0 = (int) targetPos.y;
-                for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx++) {
-                    for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz++) {
+
+                int placed = 0;
+                int spacing = Math.max(1, (int) Math.sqrt(16 * 16 / (double) total));
+
+                for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx += spacing) {
+                    for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
+                        if (placed >= total) break;
                         PrimedTnt tnt = EntityType.TNT.create(world);
                         if (tnt != null) {
                             tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5);
@@ -452,11 +522,12 @@ public class PalorderSMPMainJava {
                             tnt.setDeltaMovement(0.0, 0.0, 0.0);
                             world.addFreshEntity(tnt);
                             nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                            placed++;
                         }
                     }
                 }
-
-            } else if ("nuke".equals(type)) {
+            }
+            else if ("nuke".equals(type)) {
                 double spawnHeight = targetPos.y + 30;
                 double layerStepY = 1.0;
                 double spacing = 1.5;
