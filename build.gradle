@@ -1,5 +1,5 @@
 plugins {
-    id 'net.minecraftforge.gradle' version '5.1.+'
+    id 'net.minecraftforge.gradle' version '6.0.+'
     id 'java'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '2.0.0'
@@ -11,7 +11,7 @@ archivesBaseName = 'palordersmp-tweaked'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 // ======================================================
@@ -73,6 +73,10 @@ minecraft {
 // ======================================================
 repositories {
     maven {
+        name = "Sinytra"
+        url = "https://maven.sinytra.org/"
+    }
+    maven {
         name = 'CC-tweaked'
         url "https://maven.squiddev.cc"
         content {
@@ -82,6 +86,9 @@ repositories {
     maven {
         name = 'Kotlin for Forge'
         url = 'https://thedarkcolour.github.io/KotlinForForge/'
+    }
+    flatDir {
+        dirs 'libs'
     }
     maven { url = "https://maven.minecraftforge.net" }
     mavenCentral()
@@ -99,16 +106,18 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
+    implementation "org.sinytra.adapter:adapter:1.11.28-1.20.1-20240303.100300"
+    implementation name: "Connector-1.0.0-beta.47+1.20.1"
+    implementation name: "fabric-api-0.92.6+1.11.14+1.20.1"
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-    kotlin {
-        jvmToolchain(17) // sets JDK 17 for Kotlin compilation
-    }
+kotlin {
+    jvmToolchain(21)
 }
+
 // ======================================================
 // Jar Packaging
 // ======================================================
