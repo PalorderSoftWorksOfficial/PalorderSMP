@@ -431,6 +431,7 @@ class PalorderSMPMainKotlin {
                                 tnt.isNoGravity = true
                                 tnt.setDamageForEntityType(EntityType.PLAYER, 100000f)
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                tnt.explosionRadius = 16.0
                                 world.addFreshEntity(tnt)
                                 nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                             }
@@ -454,12 +455,13 @@ class PalorderSMPMainKotlin {
                                     if (placed >= total) break
                                     val state = world.getBlockState(BlockPos(cx, y, cz))
                                     if (!state.isAir) {
-                                        val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
                                         if (tnt != null) {
                                             tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5)
                                             tnt.setFuse(0)
                                             tnt.setNoGravity(true)
                                             tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                            tnt.explosionRadius = 1.0
                                             world.addFreshEntity(tnt)
                                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                             placed++
@@ -482,12 +484,13 @@ class PalorderSMPMainKotlin {
                         for (cx in (chunkX shl 4) until (chunkX shl 4) + 16 step spacing) {
                             for (cz in (chunkZ shl 4) until (chunkZ shl 4) + 16 step spacing) {
                                 if (placed >= total) break
-                                val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
                                 if (tnt != null) {
                                     tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5)
                                     tnt.setFuse(0)
                                     tnt.setNoGravity(true)
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                    tnt.explosionRadius = 1.0
                                     world.addFreshEntity(tnt)
                                     nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                     placed++
@@ -514,7 +517,7 @@ class PalorderSMPMainKotlin {
                                     val angle = 2 * Math.PI * i / tntsInRing
                                     val x = targetPos.x + kotlin.math.cos(angle) * radius
                                     val z = targetPos.z + kotlin.math.sin(angle) * radius
-                                    val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                                    val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
                                     if (tnt != null) {
                                         tnt.setPos(x, y, z)
                                         tnt.setFuse(100)

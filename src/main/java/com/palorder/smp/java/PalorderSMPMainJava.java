@@ -471,6 +471,7 @@ public class PalorderSMPMainJava {
                         tnt.setNoGravity(true);
                         tnt.setDeltaMovement(0.0, 0.0, 0.0);
                         tnt.setDamageForEntityType(EntityType.PLAYER,100000);
+                        tnt.setExplosionRadius(16);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }
@@ -499,6 +500,7 @@ public class PalorderSMPMainJava {
                                     tnt.setFuse(0);
                                     tnt.setNoGravity(true);
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                                    tnt.setExplosionRadius(1);
                                     world.addFreshEntity(tnt);
                                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                                     placed++;
@@ -525,6 +527,7 @@ public class PalorderSMPMainJava {
                             tnt.setFuse(0);
                             tnt.setNoGravity(true);
                             tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                            tnt.setExplosionRadius(1);
                             world.addFreshEntity(tnt);
                             nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                             placed++;
