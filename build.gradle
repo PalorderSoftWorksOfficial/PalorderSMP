@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.palorder.smp.java'
-version = '3.4'
+version = '3.5'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -119,9 +119,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": 3.3,
+                "Specification-Version": 3.5,
                 "Implementation-Title": project.name,
-                "Implementation-Version": 3.3,
+                "Implementation-Version": 3.5,
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
@@ -137,7 +137,7 @@ publishing {
             from components.java
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
-            version = '3.4'
+            version = '3.5'
         }
     }
 
