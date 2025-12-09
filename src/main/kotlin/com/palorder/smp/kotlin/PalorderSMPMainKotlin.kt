@@ -429,7 +429,7 @@ class PalorderSMPMainKotlin {
                                 tnt.setPos(targetPos.x, y, targetPos.z)
                                 tnt.fuse = 0
                                 tnt.isNoGravity = true
-                                tnt.damage = 100000F
+                                tnt.setDamageForEntityType(EntityType.PLAYER, 100000f)
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                 world.addFreshEntity(tnt)
                                 nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)

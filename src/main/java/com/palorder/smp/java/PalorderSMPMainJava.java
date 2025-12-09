@@ -441,7 +441,12 @@ public class PalorderSMPMainJava {
                 })
         );
     }
+    /*
+    Notice:
+    Please use PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+    Instead of PrimedTnt tnt = EntityType.TNT.create(world); when adding a new type as It has ExtendedAPI like setDamage, setDamageForEntityType
 
+     */
     // ---------------- Nuke Spawn ----------------
     public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type, Integer layers) {
         ServerLevel world = (ServerLevel) player.level();
@@ -465,7 +470,7 @@ public class PalorderSMPMainJava {
                         tnt.setFuse(0);
                         tnt.setNoGravity(true);
                         tnt.setDeltaMovement(0.0, 0.0, 0.0);
-                        tnt.setDamage(100000);
+                        tnt.setDamageForEntityType(EntityType.PLAYER,100000);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }
@@ -488,7 +493,7 @@ public class PalorderSMPMainJava {
                         for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
                             BlockState state = world.getBlockState(new BlockPos(cx, y, cz));
                             if (!state.isAir()) {
-                                PrimedTnt tnt = EntityType.TNT.create(world);
+                                PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
                                 if (tnt != null) {
                                     tnt.setPos(cx + 0.5, y + 0.5, cz + 0.5);
                                     tnt.setFuse(0);
@@ -514,7 +519,7 @@ public class PalorderSMPMainJava {
                 for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx += spacing) {
                     for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
                         if (placed >= total) break;
-                        PrimedTnt tnt = EntityType.TNT.create(world);
+                        PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
                         if (tnt != null) {
                             tnt.setPos(cx + 0.5, y0 + 0.5, cz + 0.5);
                             tnt.setFuse(0);
@@ -541,7 +546,7 @@ public class PalorderSMPMainJava {
                             double angle = 2 * Math.PI * i / tntInRing;
                             double x = targetPos.x + Math.cos(angle) * radius;
                             double z = targetPos.z + Math.sin(angle) * radius;
-                            PrimedTnt tnt = EntityType.TNT.create(world);
+                            PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
                             if (tnt != null) {
                                 tnt.setPos(x, y, z);
                                 tnt.setFuse(100);

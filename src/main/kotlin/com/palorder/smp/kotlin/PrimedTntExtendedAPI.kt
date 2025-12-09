@@ -14,6 +14,12 @@ import java.util.function.Consumer
 class PrimedTntExtendedAPI(type: EntityType<out PrimedTnt?>, level: Level) :
     PrimedTnt(type, level) {
     var damage: Float = 4.0f
+    var explosionRadius: Double = 10.0
+    private val entitySpecificDamage: MutableMap<EntityType<*>, Float> = HashMap()
+
+    fun setDamageForEntityType(entityType: EntityType<*>, damage: Float) {
+        entitySpecificDamage[entityType] = damage
+    }
 
     override fun explode() {
         val world = this.level()
@@ -24,15 +30,16 @@ class PrimedTntExtendedAPI(type: EntityType<out PrimedTnt?>, level: Level) :
                 .registryOrThrow(Registries.DAMAGE_TYPE)
                 .getHolderOrThrow(DamageTypes.EXPLOSION)
 
-            val radius = 10.0
-            world.getEntities(
-                this,
-                this.boundingBox.inflate(radius)
-            ).forEach(Consumer { entity: Entity ->
-                if (entity !== this) {
-                    entity.hurt(DamageSource(explosionType, this), damage)
-                }
-            })
+            world.getEntities(this, this.boundingBox.inflate(explosionRadius)).forEach(
+                Consumer { entity: Entity ->
+                    if (entity !== this) {
+                        var appliedDamage = damage
+                        if (entitySpecificDamage.containsKey(entity.type)) {
+                            appliedDamage = entitySpecificDamage[entity.type]!!
+                        }
+                        entity.hurt(DamageSource(explosionType, this), appliedDamage)
+                    }
+                })
         }
         this.discard()
     }
