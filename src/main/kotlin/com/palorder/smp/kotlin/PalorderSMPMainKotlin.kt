@@ -3,34 +3,23 @@ package com.palorder.smp.kotlin
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.context.CommandContext
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
-import net.minecraft.commands.arguments.EntityArgument
+import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.ResourceLocation
-import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.sounds.SoundEvent
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.item.PrimedTnt
-import net.minecraft.world.item.BlockItem
-import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.ChunkPos
-import net.minecraft.world.level.Level
+import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.block.Block
-import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.chunk.ChunkStatus
-import net.minecraft.world.level.material.*
-import net.minecraft.world.level.storage.LevelResource
-import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
@@ -39,50 +28,18 @@ import net.minecraftforge.event.TickEvent
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
+import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext
 import net.minecraftforge.registries.DeferredRegister
 import net.minecraftforge.registries.ForgeRegistries
-import net.minecraftforge.registries.RegistryObject
-import net.minecraftforge.fml.ModList
-import com.palorder.smp.java.PalorderSMPMainJava.rand
-import org.jetbrains.annotations.Nullable
-import com.electronwill.nightconfig.core.Config
-import com.electronwill.nightconfig.core.file.FileConfig
-import dan200.computercraft.api.ComputerCraftAPI
-import dan200.computercraft.api.lua.ILuaAPI
-import dan200.computercraft.api.lua.ILuaAPIFactory
-import dan200.computercraft.api.lua.ILuaContext
-import dan200.computercraft.api.lua.ILuaFunction
-import dan200.computercraft.api.lua.IArguments
-import dan200.computercraft.api.lua.LuaTable
-import dan200.computercraft.api.lua.LuaValues
-import dan200.computercraft.api.lua.MethodResult
-import dan200.computercraft.api.peripheral.IPeripheral
-import dan200.computercraft.api.peripheral.IComputerAccess
-import dan200.computercraft.api.peripheral.IDynamicPeripheral
-import dan200.computercraft.api.turtle.ITurtleUpgrade
-import dan200.computercraft.api.turtle.ITurtleAccess
-import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider
-import dan200.computercraft.api.filesystem.Mount
-import dan200.computercraft.api.filesystem.WritableMount
-import dan200.computercraft.api.detail.DetailProvider
-import dan200.computercraft.api.detail.DetailRegistry
-import net.minecraft.core.BlockPos
-import net.minecraft.world.level.Explosion
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import kotlin.math.cos
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.pow
-import kotlin.math.sin
 
 @Mod("palordersmp_tweaked_kotlin_beta")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked_kotlin_beta", value = [Dist.DEDICATED_SERVER], bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -467,11 +424,12 @@ class PalorderSMPMainKotlin {
                         val minY = world.minBuildHeight.toDouble()
                         var count = 0
                         while (y >= minY && count < total) {
-                            val tnt = EntityType.TNT.create(world) as? PrimedTnt
+                            val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
                             if (tnt != null) {
                                 tnt.setPos(targetPos.x, y, targetPos.z)
                                 tnt.fuse = 0
                                 tnt.isNoGravity = true
+                                tnt.damage = 100000F
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                 world.addFreshEntity(tnt)
                                 nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)

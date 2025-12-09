@@ -450,7 +450,6 @@ public class PalorderSMPMainJava {
         Vec3 end = eyePos.add(lookVec.scale(100000.0));
         BlockHitResult hitResult = world.clip(new ClipContext(eyePos, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         Vec3 targetPos = hitResult != null ? hitResult.getLocation() : end;
-
         nukePlayerTeleportBack.put(player.getGameProfile().getId(), player.position());
         int total = (tnts != null && tnts > 0) ? tnts : 1;
         int layersFinal = (layers != null) ? layers : 0;
@@ -460,12 +459,13 @@ public class PalorderSMPMainJava {
                 double minY = world.getMinBuildHeight();
                 int count = 0;
                 while (y >= minY && count < total) {
-                    PrimedTnt tnt = EntityType.TNT.create(world);
+                    PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
                     if (tnt != null) {
                         tnt.setPos(targetPos.x, y, targetPos.z);
                         tnt.setFuse(0);
                         tnt.setNoGravity(true);
                         tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                        tnt.setDamage(100000);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }
