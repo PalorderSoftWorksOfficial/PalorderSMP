@@ -11,14 +11,10 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
-import net.minecraft.world.entity.item.PrimedTnt
-import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
 import net.minecraft.world.level.ClipContext
-import net.minecraft.world.level.block.Block
-import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.chunk.ChunkStatus
 import net.minecraft.world.phys.Vec3
 import net.minecraftforge.api.distmarker.Dist
@@ -30,8 +26,6 @@ import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
-import net.minecraftforge.registries.DeferredRegister
-import net.minecraftforge.registries.ForgeRegistries
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.*
@@ -60,13 +54,6 @@ class PalorderSMPMainKotlin {
     }
 
     companion object {
-        // ---------------- Deferred Registers ----------------
-        val ITEMS: DeferredRegister<Item> =
-            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp_tweaked_kotlin_beta")
-        val BLOCKS: DeferredRegister<Block> =
-            DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked_kotlin_beta")
-        val BLOCK_ENTITIES: DeferredRegister<BlockEntityType<*>> =
-            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked_kotlin_beta")
         val scheduled = HashMap<Int, MutableList<() -> Unit>>()
 
         fun runLater(world: ServerLevel, ticks: Int, r: () -> Unit) {

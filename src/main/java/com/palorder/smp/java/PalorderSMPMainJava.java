@@ -3,31 +3,18 @@ package com.palorder.smp.java;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.context.CommandContext;
-import net.minecraft.commands.CommandSource;
-import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.item.PrimedTnt;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.Explosion;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.chunk.ChunkStatus;
-import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -38,90 +25,44 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.*;
-import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.network.chat.Component;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
-import org.jetbrains.annotations.Nullable;
 
-import com.electronwill.nightconfig.core.Config;
-import com.electronwill.nightconfig.core.file.FileConfig;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 // Core entry point
-import dan200.computercraft.api.ComputerCraftAPI;  // :contentReference[oaicite:1]{index=1}
+// :contentReference[oaicite:1]{index=1}
 
 
 // Lua‑API interfaces
-import dan200.computercraft.api.lua.ILuaAPI;
-import dan200.computercraft.api.lua.ILuaAPIFactory;
-import dan200.computercraft.api.lua.ILuaContext;
-import dan200.computercraft.api.lua.ILuaFunction;
-import dan200.computercraft.api.lua.IArguments;
-import dan200.computercraft.api.lua.LuaTable;
-import dan200.computercraft.api.lua.LuaValues;
-import dan200.computercraft.api.lua.MethodResult;  // :contentReference[oaicite:2]{index=2}
+// :contentReference[oaicite:2]{index=2}
 
 
 // Peripheral / Computer interfaces
-import dan200.computercraft.api.peripheral.IPeripheral;
-import dan200.computercraft.api.peripheral.IComputerAccess;
-import dan200.computercraft.api.peripheral.IDynamicPeripheral;  // :contentReference[oaicite:3]{index=3}
+// :contentReference[oaicite:3]{index=3}
 
 
 // Turtle / upgrade interfaces
-import dan200.computercraft.api.turtle.ITurtleUpgrade;
-import dan200.computercraft.api.turtle.ITurtleAccess;
-import dan200.computercraft.api.turtle.TurtleUpgradeDataProvider;  // :contentReference[oaicite:4]{index=4}
+// :contentReference[oaicite:4]{index=4}
 
 
 // Filesystem / mounts
-import dan200.computercraft.api.filesystem.Mount;
-import dan200.computercraft.api.filesystem.WritableMount;  // :contentReference[oaicite:5]{index=5}
+// :contentReference[oaicite:5]{index=5}
 
 
 // Detail providers & registries (for item/block detail exposed to computers)
-import dan200.computercraft.api.detail.DetailProvider;
-import dan200.computercraft.api.detail.DetailRegistry;  // :contentReference[oaicite:6]{index=6}
+// :contentReference[oaicite:6]{index=6}
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 @Mod("palordersmp_tweaked")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PalorderSMPMainJava {
-
-    // ---------------- Deferred Registers ----------------
-    public static final DeferredRegister<Item> ITEMS =
-            DeferredRegister.create(ForgeRegistries.ITEMS, "palordersmp_tweaked");
-    public static final DeferredRegister<Block> BLOCKS =
-            DeferredRegister.create(ForgeRegistries.BLOCKS, "palordersmp_tweaked");
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, "palordersmp_tweaked");
     public static final Map<Integer, List<Runnable>> scheduled = new HashMap<>();
 
     public static void runLater(ServerLevel world, int ticks, Runnable r) {
