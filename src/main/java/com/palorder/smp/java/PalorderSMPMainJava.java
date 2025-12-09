@@ -146,7 +146,7 @@ public class PalorderSMPMainJava {
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
     private static final Logger log = LogManager.getLogger(PalorderSMPMainJava.class);
-
+    private static final Integer winintlimit = Integer.MAX_VALUE;
     static {
         chatItemRewards.put("gimme natherite blocks ples", new ItemStack(Items.NETHERITE_BLOCK, 64));
         chatItemRewards.put("i need food ples give me food 2 stacks ples", new ItemStack(Items.GOLDEN_CARROT, 128));
