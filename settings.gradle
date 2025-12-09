@@ -1,9 +1,5 @@
 pluginManagement {
     repositories {
-        maven {
-            name = "Sinytra"
-            url = "https://maven.sinytra.org/"
-        }
         maven { url = "https://maven.minecraftforge.net" }
         gradlePluginPortal()
         mavenCentral()
