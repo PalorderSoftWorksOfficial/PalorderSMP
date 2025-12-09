@@ -83,6 +83,10 @@ repositories {
         name = 'Kotlin for Forge'
         url = 'https://thedarkcolour.github.io/KotlinForForge/'
     }
+    maven {
+        name = 'PalorderHosting'
+        url = 'https://maven.palorderhosting.net/'
+    }
     maven { url = "https://maven.minecraftforge.net" }
     mavenCentral()
 }
@@ -99,6 +103,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
+    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:3.5')
 }
 
 tasks.withType(JavaCompile).configureEach {
