@@ -136,6 +136,28 @@ jar {
 // ======================================================
 // Publishing
 // ======================================================
+
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Base64
+
+task createVersionFolder {
+    doLast {
+        def version = project.version
+        def versionUrl = "https://maven.palorderhosting.net/com/palorder/smp/java/palordersmp-tweaked/${version}/"
+        def connection = new URL(versionUrl).openConnection() as HttpURLConnection
+        connection.requestMethod = "MKCOL"
+        def auth = "${System.getenv("MAVEN_USERNAME")}:${System.getenv("MAVEN_PASSWORD")}"
+        connection.setRequestProperty("Authorization", "Basic " + Base64.encoder.encodeToString(auth.bytes))
+        connection.connect()
+        if (!(connection.responseCode in 200..299 || connection.responseCode == 405)) {
+            throw new GradleException("Failed to create version folder: ${connection.responseMessage}")
+        }
+    }
+}
+
+publish.dependsOn createVersionFolder
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
