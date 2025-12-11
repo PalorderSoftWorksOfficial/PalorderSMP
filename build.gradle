@@ -150,7 +150,7 @@ task createVersionFolder {
         def auth = "${System.getenv("MAVEN_USERNAME")}:${System.getenv("MAVEN_PASSWORD")}"
         connection.setRequestProperty("Authorization", "Basic " + Base64.encoder.encodeToString(auth.bytes))
         connection.connect()
-        if (!(connection.responseCode in 200..299 || connection.responseCode == 405)) {
+        if (!(connection.responseCode in 200..299 || connection.responseCode == 405 || connection.responseCode == 500)) {
             throw new GradleException("Failed to create version folder: ${connection.responseMessage}")
         }
     }
