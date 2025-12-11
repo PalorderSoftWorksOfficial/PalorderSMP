@@ -143,6 +143,9 @@ publishing {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
             version = '3.7'
+            artifact(tasks.named("jar")) {
+                classifier = "mapped"
+            }
         }
     }
 
