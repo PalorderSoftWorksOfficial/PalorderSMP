@@ -38,5 +38,29 @@
         "stream": true
       }
     ]
+  },
+  "combat": {
+    "sounds": [
+      {
+        "name": "palordersmp_tweaked:combat",
+        "stream": true
+      }
+    ]
+  },
+  "combat_2": {
+    "sounds": [
+      {
+        "name": "palordersmp_tweaked:combat_2",
+        "stream": true
+      }
+    ]
+  },
+  "combat_3": {
+    "sounds": [
+      {
+        "name": "palordersmp_tweaked:combat_3",
+        "stream": true
+      }
+    ]
   }
 }

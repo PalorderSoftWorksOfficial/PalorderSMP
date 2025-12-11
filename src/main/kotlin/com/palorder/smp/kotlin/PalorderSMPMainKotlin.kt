@@ -61,7 +61,7 @@ class PalorderSMPMainKotlin {
             scheduled.computeIfAbsent(targetTick) { ArrayList() }.add(r)
         }
 
-        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java)
+        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class)
 
         // ---------------- Server / Scheduler ----------------
         val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")

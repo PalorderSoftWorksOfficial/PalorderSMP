@@ -27,7 +27,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.ModList;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.*;
 import net.minecraft.core.BlockPos;
 
 import java.util.*;
@@ -388,6 +387,7 @@ public class PalorderSMPMainJava {
     Instead of PrimedTnt tnt = EntityType.TNT.create(world); when adding a new type as It has ExtendedAPI like setDamage, setDamageForEntityType
 
      */
+
     // ---------------- Nuke Spawn ----------------
     public static void spawnTNTNuke(ServerPlayer player, Integer tnts, String type, Integer layers) {
         ServerLevel world = (ServerLevel) player.level();
