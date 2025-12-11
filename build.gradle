@@ -137,11 +137,19 @@ jar {
 // Publishing
 // ======================================================
 publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'com.palorder.smp.java'
+            artifactId = 'palordersmp-tweaked'
+            version = '3.7'
+        }
+    }
+
     repositories {
         maven {
             name = "palorderHosting"
             url = uri("https://maven.palorderhosting.net")
-
             credentials {
                 username = System.getenv("MAVEN_USERNAME")
                 password = System.getenv("MAVEN_PASSWORD")
