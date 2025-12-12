@@ -1,16 +1,23 @@
 package com.palorder.smp.kotlin
 
+import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.suggestion.SuggestionProvider
+import com.mojang.brigadier.suggestion.SuggestionsBuilder
+import com.palorder.smp.java.PalorderSMPMainJava
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
+import net.minecraft.commands.SharedSuggestionProvider
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.item.FishingRodItem
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.ChunkPos
@@ -21,6 +28,8 @@ import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
+import net.minecraftforge.event.entity.player.PlayerInteractEvent
+import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
@@ -32,6 +41,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 import kotlin.math.max
 import kotlin.math.pow
 
@@ -118,6 +128,43 @@ class PalorderSMPMainKotlin {
             list?.forEach { it.invoke() }
         }
 
+        @SubscribeEvent
+        fun onUse(e: PlayerInteractEvent.RightClickItem) {
+            if (e.level.isClientSide) return
+            val s = e.itemStack
+            if (s.item !is FishingRodItem) return
+            val t = s.tag ?: return
+            if (!t.contains("RodType")) return
+
+            val type = t.getString("RodType")
+            val p = e.entity as ServerPlayer
+
+            var amount = 0
+            var layers = 0
+
+            when (type) {
+                "stab" -> {
+                    amount = 900
+                    layers = 1
+                }
+                "nuke" -> {
+                    amount = 500
+                    layers = 5000
+                }
+                "chunklaser" -> {
+                    amount = 256
+                    layers = 1
+                }
+                "chunkdel" -> {
+                    amount = 49152
+                    layers = 1
+                }
+            }
+
+            if (amount > 0) spawnTNTNuke(p, amount, type, layers)
+
+            e.isCanceled = true
+        }
         // ---------------- Commands ----------------
         @JvmStatic
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack>) {
@@ -254,6 +301,44 @@ class PalorderSMPMainKotlin {
                                 }
                                 1
                             }
+                    )
+            )
+            dispatcher.register(
+                Commands.literal("linkfrod")
+                    .requires(Predicate requires@{ source: CommandSourceStack? ->
+                        try {
+                            val player = source!!.getPlayer()
+                            if (player != null) {
+                                return@requires player.getGameProfile().getId() == PalorderSMPMainJava.OWNER_UUID
+                                        || player.getGameProfile().getId() == PalorderSMPMainJava.OWNER_UUID2
+                                        || "dev".equals(player.getName().getString(), ignoreCase = true)
+                            }
+                            return@requires true
+                        } catch (e: java.lang.Exception) {
+                            throw java.lang.RuntimeException(e)
+                        }
+                    })
+                    .then(
+                        Commands.argument<String?>("target", StringArgumentType.word())
+                            .then(
+                                Commands.argument<String?>("type", StringArgumentType.string())
+                                    .suggests(SuggestionProvider { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
+                                        SharedSuggestionProvider.suggest(
+                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel"),
+                                            builder
+                                        )
+                                    })
+                                    .executes(Command executes@{ context: CommandContext<CommandSourceStack?>? ->
+                                        val p = context!!.getSource()!!.getPlayer()
+                                        val type = StringArgumentType.getString(context, "type")
+                                        checkNotNull(p)
+                                        val i = p.getMainHandItem()
+                                        if (i.getItem() !is FishingRodItem) return@executes 0
+                                        i.getOrCreateTag().putString("RodType", type)
+                                        i.setHoverName(Component.literal(type + " shot"))
+                                        1
+                                    })
+                            )
                     )
             )
             dispatcher.register(

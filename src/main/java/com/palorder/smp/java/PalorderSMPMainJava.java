@@ -5,12 +5,14 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -21,6 +23,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -135,7 +138,18 @@ public class PalorderSMPMainJava {
         List<Runnable> list = scheduled.remove((int) time);
         if (list != null) for (Runnable r : list) r.run();
     }
-
+    @SubscribeEvent
+    public static void onUse(PlayerInteractEvent.RightClickItem e) {
+        if (e.getLevel().isClientSide()) return;
+        ItemStack s = e.getItemStack();
+        if (!(s.getItem() instanceof FishingRodItem)) return;
+        CompoundTag t = s.getTag();
+        if (t == null || !t.contains("RodType")) return;
+        String type = t.getString("RodType");
+        ServerPlayer p = (ServerPlayer) e.getEntity();
+        spawnTNTNuke(p, 900, type, 1);
+        e.setCanceled(true);
+    }
     // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("orbital")
@@ -276,6 +290,35 @@ public class PalorderSMPMainJava {
                             return 1;
                         }))
         );
+        dispatcher.register(Commands.literal("linkfrod")
+                .requires(source -> {
+                    try {
+                        ServerPlayer player = source.getPlayer();
+                        if (player != null) {
+                            return player.getGameProfile().getId().equals(OWNER_UUID)
+                                    || player.getGameProfile().getId().equals(OWNER_UUID2)
+                                    || "dev".equalsIgnoreCase(player.getName().getString());
+                        }
+                        return true;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .then(Commands.argument("type", StringArgumentType.string())
+                                .suggests((ctx, builder) ->
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel"), builder))
+                                .executes(context -> {
+                                    ServerPlayer p = context.getSource().getPlayer();
+                                    String type = StringArgumentType.getString(context, "type");
+                                    assert p != null;
+                                    ItemStack i = p.getMainHandItem();
+                                    if (!(i.getItem() instanceof FishingRodItem)) return 0;
+                                    i.getOrCreateTag().putString("RodType", type);
+                                    i.setHoverName(Component.literal(type + " shot"));
+                                    return 1;
+                                })
+                        )));
         dispatcher.register(Commands.literal("fastchunklaser")
                 .requires(source -> {
                     try {
