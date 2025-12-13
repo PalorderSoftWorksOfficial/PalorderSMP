@@ -141,14 +141,50 @@ public class PalorderSMPMainJava {
     @SubscribeEvent
     public static void onUse(PlayerInteractEvent.RightClickItem e) {
         if (e.getLevel().isClientSide()) return;
+
         ItemStack s = e.getItemStack();
         if (!(s.getItem() instanceof FishingRodItem)) return;
+
         CompoundTag t = s.getTag();
         if (t == null || !t.contains("RodType")) return;
+
         String type = t.getString("RodType");
         ServerPlayer p = (ServerPlayer) e.getEntity();
-        spawnTNTNuke(p, 900, type, 1);
+        ServerLevel world = p.serverLevel();
         e.setCanceled(true);
+
+        s.shrink(1);
+
+        int amount = 0;
+        int layers = 0;
+
+        switch (type) {
+            case "stab":
+                amount = 900;
+                layers = 1;
+                break;
+            case "nuke":
+                amount = 1000;
+                layers = 50000;
+                break;
+            case "chunklaser":
+                amount = 256;
+                layers = 1;
+                break;
+            case "chunkdel":
+                amount = 49152;
+                layers = 1;
+                break;
+        }
+
+        if (amount > 0) {
+            int finalAmount = amount;
+            int finalLayers = layers;
+            runLater(world, 30, () -> {
+                if (!p.isAlive()) return;
+                spawnTNTNuke(p, finalAmount, type, finalLayers);
+            });
+        }
     }
     // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -253,7 +289,7 @@ public class PalorderSMPMainJava {
                         CommandSourceStack source = context.getSource();
                         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(StringArgumentType.getString(context, "target"));
                         if (player != null) {
-                            spawnTNTNuke(player, 500, "nuke", 5000);
+                            spawnTNTNuke(player, 1000, "nuke", 50000);
                             player.sendSystemMessage(Component.literal("Fastorbitaled be ready lmao"));
                         }
                         else {

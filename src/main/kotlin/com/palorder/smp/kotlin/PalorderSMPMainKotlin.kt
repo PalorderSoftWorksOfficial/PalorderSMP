@@ -129,8 +129,9 @@ class PalorderSMPMainKotlin {
         }
 
         @SubscribeEvent
+        @JvmStatic
         fun onUse(e: PlayerInteractEvent.RightClickItem) {
-            if (e.level.isClientSide) return
+            if (e.entity.level().isClientSide) return
             val s = e.itemStack
             if (s.item !is FishingRodItem) return
             val t = s.tag ?: return
@@ -138,6 +139,9 @@ class PalorderSMPMainKotlin {
 
             val type = t.getString("RodType")
             val p = e.entity as ServerPlayer
+            val world = p.level() as ServerLevel
+            e.isCanceled = true
+            s.shrink(1)
 
             var amount = 0
             var layers = 0
@@ -148,8 +152,8 @@ class PalorderSMPMainKotlin {
                     layers = 1
                 }
                 "nuke" -> {
-                    amount = 500
-                    layers = 5000
+                    amount = 1000
+                    layers = 50000
                 }
                 "chunklaser" -> {
                     amount = 256
@@ -161,9 +165,10 @@ class PalorderSMPMainKotlin {
                 }
             }
 
-            if (amount > 0) spawnTNTNuke(p, amount, type, layers)
-
-            e.isCanceled = true
+            if (amount > 0) runLater(world, 30) {
+                if (!p.isAlive) return@runLater
+                spawnTNTNuke(p, amount, type, layers)
+            }
         }
         // ---------------- Commands ----------------
         @JvmStatic
@@ -294,7 +299,7 @@ class PalorderSMPMainKotlin {
                                 val source = context.source
                                 val player = source.server.playerList.getPlayerByName(StringArgumentType.getString(context, "target"))
                                 if (player != null) {
-                                    spawnTNTNuke(player, 500, "nuke", 5000)
+                                    spawnTNTNuke(player, 1000, "nuke", 50000)
                                     player.sendSystemMessage(Component.literal("Fastorbitaled be ready lmao"))
                                 } else {
                                     source.sendSuccess({ Component.literal("Fastorbitaled be ready lmao.") }, false)
