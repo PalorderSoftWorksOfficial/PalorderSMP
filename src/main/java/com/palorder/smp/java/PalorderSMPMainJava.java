@@ -153,8 +153,6 @@ public class PalorderSMPMainJava {
         ServerLevel world = p.serverLevel();
         e.setCanceled(true);
 
-        s.shrink(1);
-
         int amount = 0;
         int layers = 0;
 
@@ -180,8 +178,9 @@ public class PalorderSMPMainJava {
         if (amount > 0) {
             int finalAmount = amount;
             int finalLayers = layers;
-            runLater(world, 30, () -> {
+            runLater(world, 20, () -> {
                 if (!p.isAlive()) return;
+                s.shrink(1);
                 spawnTNTNuke(p, finalAmount, type, finalLayers);
             });
         }
@@ -574,7 +573,7 @@ public class PalorderSMPMainJava {
                                 tnt.setPos(x, y, z);
                                 tnt.setFuse(100);
                                 tnt.setNoGravity(false);
-                                tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                                tnt.setDownForce(10f);
                                 world.addFreshEntity(tnt);
                                 nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                                 spawned++;

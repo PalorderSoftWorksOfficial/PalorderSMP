@@ -141,7 +141,6 @@ class PalorderSMPMainKotlin {
             val p = e.entity as ServerPlayer
             val world = p.level() as ServerLevel
             e.isCanceled = true
-            s.shrink(1)
 
             var amount = 0
             var layers = 0
@@ -167,6 +166,7 @@ class PalorderSMPMainKotlin {
 
             if (amount > 0) runLater(world, 30) {
                 if (!p.isAlive) return@runLater
+                s.shrink(1)
                 spawnTNTNuke(p, amount, type, layers)
             }
         }
@@ -508,7 +508,7 @@ class PalorderSMPMainKotlin {
                                 tnt.isNoGravity = true
                                 tnt.setDamageForEntityType(EntityType.PLAYER, 100000f)
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
-                                tnt.explosionRadius = 16.0
+                                tnt.setExplosionRadius(16.0)
                                 world.addFreshEntity(tnt)
                                 nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                             }
@@ -538,7 +538,7 @@ class PalorderSMPMainKotlin {
                                             tnt.setFuse(0)
                                             tnt.setNoGravity(true)
                                             tnt.setDeltaMovement(0.0, 0.0, 0.0)
-                                            tnt.explosionRadius = 1.0
+                                            tnt.setExplosionRadius(1.0)
                                             world.addFreshEntity(tnt)
                                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                             placed++
@@ -567,7 +567,7 @@ class PalorderSMPMainKotlin {
                                     tnt.setFuse(0)
                                     tnt.setNoGravity(true)
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0)
-                                    tnt.explosionRadius = 1.0
+                                    tnt.setExplosionRadius(1.0)
                                     world.addFreshEntity(tnt)
                                     nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                     placed++
@@ -599,7 +599,7 @@ class PalorderSMPMainKotlin {
                                         tnt.setPos(x, y, z)
                                         tnt.setFuse(100)
                                         tnt.setNoGravity(false)
-                                        tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                                        tnt.downForce = 10f
                                         world.addFreshEntity(tnt)
                                         nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                         spawned++

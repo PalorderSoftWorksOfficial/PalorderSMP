@@ -5,10 +5,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +17,7 @@ public class PrimedTntExtendedAPI extends PrimedTnt {
 
     private float damage = 4.0f;
     private double explosionRadius = 10.0;
+    private float downForce = 0.04f;
     private final Map<EntityType<?>, Float> entitySpecificDamage = new HashMap<>();
 
     public PrimedTntExtendedAPI(EntityType<? extends PrimedTnt> type, Level level) {
@@ -35,12 +36,19 @@ public class PrimedTntExtendedAPI extends PrimedTnt {
         entitySpecificDamage.put(entityType, damage);
     }
 
-    public float getDamage() {
-        return this.damage;
+    public void setDownForce(float force) {
+        this.downForce = force;
     }
 
-    public double getExplosionRadius() {
-        return this.explosionRadius;
+    public float getDownForce() {
+        return this.downForce;
+    }
+
+    @Override
+    public void tick() {
+        Vec3 motion = this.getDeltaMovement();
+        this.setDeltaMovement(motion.x, motion.y - downForce, motion.z);
+        super.tick();
     }
 
     @Override
@@ -55,10 +63,7 @@ public class PrimedTntExtendedAPI extends PrimedTnt {
 
             world.getEntities(this, this.getBoundingBox().inflate(explosionRadius)).forEach(entity -> {
                 if (entity != this) {
-                    float appliedDamage = damage;
-                    if (entitySpecificDamage.containsKey(entity.getType())) {
-                        appliedDamage = entitySpecificDamage.get(entity.getType());
-                    }
+                    float appliedDamage = entitySpecificDamage.getOrDefault(entity.getType(), damage);
                     entity.hurt(new DamageSource(explosionType, this), appliedDamage);
                 }
             });
