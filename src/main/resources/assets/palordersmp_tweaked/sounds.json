@@ -62,5 +62,13 @@
         "stream": true
       }
     ]
+  },
+  "combat_4": {
+    "sounds": [
+      {
+        "name": "palordersmp_tweaked:combat_4",
+        "stream": true
+      }
+    ]
   }
 }
