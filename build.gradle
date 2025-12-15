@@ -185,7 +185,100 @@ task createVersionFolder {
         client.close()
     }
 }
+task createVersionFolderForMapped {
+    doLast {
+        def version = project.version
+        def url = "https://maven.palorderhosting.net/com/palorder/smp/java/palordersmp-tweaked-mapped/${version}/"
+
+        CredentialsProvider creds = new BasicCredentialsProvider()
+        creds.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(
+                        System.getenv("MAVEN_USERNAME"),
+                        System.getenv("MAVEN_PASSWORD")
+                )
+        )
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setDefaultCredentialsProvider(creds)
+                .build()
+
+        def mk = new HttpMkcol(url)
+        def response = client.execute(mk)
+        def code = response.getStatusLine().getStatusCode()
+
+        if (!(code == HttpStatus.SC_CREATED || code == HttpStatus.SC_METHOD_NOT_ALLOWED || code == HttpStatus.SC_CONFLICT)) {
+            throw new GradleException("Failed to create version folder: HTTP $code")
+        }
+
+        response.getEntity()?.getContent()?.close()
+        client.close()
+    }
+}
+task createVersionFolderKOTLIN {
+    doLast {
+        def version = project.version
+        def url = "https://maven.palorderhosting.net/com/palorder/smp/kotlin/palordersmp-tweaked/${version}/"
+
+        CredentialsProvider creds = new BasicCredentialsProvider()
+        creds.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(
+                        System.getenv("MAVEN_USERNAME"),
+                        System.getenv("MAVEN_PASSWORD")
+                )
+        )
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setDefaultCredentialsProvider(creds)
+                .build()
+
+        def mk = new HttpMkcol(url)
+        def response = client.execute(mk)
+        def code = response.getStatusLine().getStatusCode()
+
+        if (!(code == HttpStatus.SC_CREATED || code == HttpStatus.SC_METHOD_NOT_ALLOWED || code == HttpStatus.SC_CONFLICT)) {
+            throw new GradleException("Failed to create version folder: HTTP $code")
+        }
+
+        response.getEntity()?.getContent()?.close()
+        client.close()
+    }
+}
+task createVersionFolderForMappedKOTLIN {
+    doLast {
+        def version = project.version
+        def url = "https://maven.palorderhosting.net/com/palorder/smp/kotlin/palordersmp-tweaked-mapped/${version}/"
+
+        CredentialsProvider creds = new BasicCredentialsProvider()
+        creds.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(
+                        System.getenv("MAVEN_USERNAME"),
+                        System.getenv("MAVEN_PASSWORD")
+                )
+        )
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setDefaultCredentialsProvider(creds)
+                .build()
+
+        def mk = new HttpMkcol(url)
+        def response = client.execute(mk)
+        def code = response.getStatusLine().getStatusCode()
+
+        if (!(code == HttpStatus.SC_CREATED || code == HttpStatus.SC_METHOD_NOT_ALLOWED || code == HttpStatus.SC_CONFLICT)) {
+            throw new GradleException("Failed to create version folder: HTTP $code")
+        }
+
+        response.getEntity()?.getContent()?.close()
+        client.close()
+    }
+}
 publish.dependsOn createVersionFolder
+publish.dependsOn createVersionFolderForMapped
+publish.dependsOn createVersionFolderKOTLIN
+publish.dependsOn createVersionFolderForMappedKOTLIN
 publish.dependsOn build
 publishing {
     publications {
@@ -194,9 +287,18 @@ publishing {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
             version = '4.0'
-            artifact(tasks.named("jar")) {
-                classifier = "mapped"
-            }
+        }
+        mavenKotlin(MavenPublication) {
+            from components.kotlin
+            groupId = 'com.palorder.smp.kotlin'
+            artifactId = 'palordersmp-tweaked'
+            version = '4.0'
+        }
+        mapped(MavenPublication) {
+            groupId = "com.palorder.smp.java"
+            artifactId = "palordersmp-tweaked-mapped"
+            version = "4.0"
+            artifact(tasks.named("jar"))
         }
     }
 
