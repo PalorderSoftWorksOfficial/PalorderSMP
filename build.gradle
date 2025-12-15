@@ -18,7 +18,7 @@ configurations {
 }
 
 group = 'com.palorder.smp.java'
-version = '4.0'
+version = '4.1'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -115,7 +115,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
-    proguard 'net.sf.proguard:proguard-base:7.5.0'
+    proguard "com.guardsquare:proguard-base:7.4.2"
     // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.0')
     // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.0"
 }
@@ -133,14 +133,15 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
 // ======================================================
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveClassifier.set("raw")
 
     manifest {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": 4.0,
+                "Specification-Version": "4.0",
                 "Implementation-Title": project.name,
-                "Implementation-Version": 4.0,
+                "Implementation-Version": "4.0",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
@@ -286,19 +287,23 @@ publish.dependsOn createVersionFolderKOTLIN
 publish.dependsOn createVersionFolderForMappedKOTLIN
 publish.dependsOn build
 task proguardJar(type: JavaExec) {
-    group = 'build'
-    description = 'Obfuscates the jar using ProGuard'
+    group = "build"
+    description = "Obfuscates the jar using ProGuard"
+
     classpath = configurations.proguard
-    mainClass.set('proguard.ProGuard')
-    def inputJar = tasks.named("jar").get().archiveFile.get().asFile
+    mainClass.set("proguard.ProGuard")
+
+    def inputJar = jar.archiveFile.get().asFile
     def outputJar = file("$buildDir/libs/palordersmp-tweaked-4.0.jar")
-    args = [
+
+    args(
             "@proguard.pro",
-            "-injars", inputJar,
-            "-outjars", outputJar,
-            "-libraryjars", "${System.getProperty('java.home')}/jmods/java.base.jmod"
-    ]
-    dependsOn tasks.named("jar")
+            "-injars", inputJar.absolutePath,
+            "-outjars", outputJar.absolutePath,
+            "-libraryjars", "${System.getProperty("java.home")}/jmods/java.base.jmod"
+    )
+
+    dependsOn jar
 }
 
 publishing {
@@ -306,19 +311,19 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
-            version = '4.0'
-            artifact(file("$buildDir/libs/palordersmp-tweaked-4.0.jar"))
+            version = '4.1'
+            artifact(file("$buildDir/libs/palordersmp-tweaked-4.1.jar"))
         }
         mavenKotlin(MavenPublication) {
             groupId = 'com.palorder.smp.kotlin'
             artifactId = 'palordersmp-tweaked'
-            version = '4.0'
-            artifact(file("$buildDir/libs/palordersmp-tweaked-4.0.jar"))
+            version = '4.1'
+            artifact(file("$buildDir/libs/palordersmp-tweaked-4.1.jar"))
         }
         mapped(MavenPublication) {
             groupId = "com.palorder.smp.java"
             artifactId = "palordersmp-tweaked-mapped"
-            version = "4.0"
+            version = "4.1"
             artifact(tasks.named("jar"))
         }
     }
