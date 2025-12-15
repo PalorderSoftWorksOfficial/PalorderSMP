@@ -1,3 +1,11 @@
+buildscript {
+    repositories { mavenCentral() }
+    dependencies {
+        classpath "org.apache.httpcomponents.client5:httpclient5:5.3"
+        classpath "org.apache.jackrabbit:jackrabbit-webdav:2.22.2"
+    }
+}
+
 plugins {
     id 'net.minecraftforge.gradle' version '5.1.+'
     id 'java'
@@ -103,7 +111,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
-    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:3.5')
+    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.0')
+    // implementation "com.palorder.smp.java:palordersmp-tweaked:4.0"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -137,27 +146,47 @@ jar {
 // Publishing
 // ======================================================
 
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.Base64
+import org.apache.jackrabbit.webdav.client.methods.HttpMkcol
+import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.http.impl.client.HttpClients
+import org.apache.http.auth.UsernamePasswordCredentials
+import org.apache.http.impl.client.BasicCredentialsProvider
+import org.apache.http.client.CredentialsProvider
+import org.apache.http.auth.AuthScope
+import org.apache.http.HttpStatus
 
 task createVersionFolder {
     doLast {
         def version = project.version
-        def versionUrl = "https://maven.palorderhosting.net/com/palorder/smp/java/palordersmp-tweaked/${version}/"
-        def connection = new URL(versionUrl).openConnection() as HttpURLConnection
-        connection.requestMethod = "MKCOL"
-        def auth = "${System.getenv("MAVEN_USERNAME")}:${System.getenv("MAVEN_PASSWORD")}"
-        connection.setRequestProperty("Authorization", "Basic " + Base64.encoder.encodeToString(auth.bytes))
-        connection.connect()
-        if (!(connection.responseCode in 200..299 || connection.responseCode == 405 || connection.responseCode == 500)) {
-            throw new GradleException("Failed to create version folder: ${connection.responseMessage}")
+        def url = "https://maven.palorderhosting.net/com/palorder/smp/java/palordersmp-tweaked/${version}/"
+
+        CredentialsProvider creds = new BasicCredentialsProvider()
+        creds.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(
+                        System.getenv("MAVEN_USERNAME"),
+                        System.getenv("MAVEN_PASSWORD")
+                )
+        )
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setDefaultCredentialsProvider(creds)
+                .build()
+
+        def mk = new HttpMkcol(url)
+        def response = client.execute(mk)
+        def code = response.getStatusLine().getStatusCode()
+
+        if (!(code == HttpStatus.SC_CREATED || code == HttpStatus.SC_METHOD_NOT_ALLOWED || code == HttpStatus.SC_CONFLICT)) {
+            throw new GradleException("Failed to create version folder: HTTP $code")
         }
+
+        response.getEntity()?.getContent()?.close()
+        client.close()
     }
 }
-
 publish.dependsOn createVersionFolder
-
+publish.dependsOn build
 publishing {
     publications {
         mavenJava(MavenPublication) {
