@@ -116,8 +116,8 @@ dependencies {
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
     proguard "com.guardsquare:proguard-base:7.4.2"
-    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.0')
-    // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.0"
+    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.1')
+    // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.1"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -139,9 +139,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "4.0",
+                "Specification-Version": "4.1",
                 "Implementation-Title": project.name,
-                "Implementation-Version": "4.0",
+                "Implementation-Version": "4.1",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
@@ -294,7 +294,7 @@ task proguardJar(type: JavaExec) {
     mainClass.set("proguard.ProGuard")
 
     def inputJar = jar.archiveFile.get().asFile
-    def outputJar = file("$buildDir/libs/palordersmp-tweaked-4.0.jar")
+    def outputJar = file("$buildDir/libs/palordersmp-tweaked-${version}.jar")
 
     args(
             "@proguard.pro",
@@ -311,19 +311,19 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = 'com.palorder.smp.java'
             artifactId = 'palordersmp-tweaked'
-            version = '4.1'
-            artifact(file("$buildDir/libs/palordersmp-tweaked-4.1.jar"))
+            version = version
+            artifact(file("$buildDir/libs/palordersmp-tweaked-${version}.jar"))
         }
         mavenKotlin(MavenPublication) {
             groupId = 'com.palorder.smp.kotlin'
             artifactId = 'palordersmp-tweaked'
-            version = '4.1'
-            artifact(file("$buildDir/libs/palordersmp-tweaked-4.1.jar"))
+            version = version
+            artifact(file("$buildDir/libs/palordersmp-tweaked-${version}.jar"))
         }
         mapped(MavenPublication) {
             groupId = "com.palorder.smp.java"
             artifactId = "palordersmp-tweaked-mapped"
-            version = "4.1"
+            version = version
             artifact(tasks.named("jar"))
         }
     }
