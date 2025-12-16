@@ -127,47 +127,52 @@ class PalorderSMPMainKotlin {
             val list = scheduled.remove(time)
             list?.forEach { it.invoke() }
         }
-
-        @SubscribeEvent
         @JvmStatic
+        @SubscribeEvent
         fun onUse(e: PlayerInteractEvent.RightClickItem) {
-            if (e.entity.level().isClientSide) return
+            if (e.level.isClientSide) return
+
             val s = e.itemStack
             if (s.item !is FishingRodItem) return
-            val t = s.tag ?: return
-            if (!t.contains("RodType")) return
 
-            val type = t.getString("RodType")
+            val t = s.orCreateTag
+            val type = if (t.contains("RodType")) t.getString("RodType") else null
+            if (type == null) return
+
             val p = e.entity as ServerPlayer
-            val world = p.level() as ServerLevel
+            val world = p.serverLevel()
             e.isCanceled = true
 
-            var amount = 0
-            var layers = 0
+            val rodUse = t.getInt("RodUse") + 1
+            t.putInt("RodUse", rodUse)
 
-            when (type) {
-                "stab" -> {
-                    amount = 900
-                    layers = 1
+            if (rodUse == 1) {
+                runLater(world, 130) {
+                    if (s.hasTag()) s.tag!!.putInt("RodUse", 0)
                 }
-                "nuke" -> {
-                    amount = 1000
-                    layers = 50000
-                }
-                "chunklaser" -> {
-                    amount = 256
-                    layers = 1
-                }
-                "chunkdel" -> {
-                    amount = 49152
-                    layers = 1
-                }
+                return
             }
 
-            if (amount > 0) runLater(world, 30) {
+            if (rodUse < 2) return
+
+            val amount = when (type) {
+                "stab" -> 900
+                "nuke" -> 1000
+                "chunklaser" -> 256
+                "chunkdel" -> 49152
+                else -> 0
+            }
+            val layers = when (type) {
+                "stab", "chunklaser", "chunkdel" -> 1
+                "nuke" -> 50000
+                else -> 0
+            }
+
+            runLater(world, 10) {
                 if (!p.isAlive) return@runLater
                 s.shrink(1)
                 spawnTNTNuke(p, amount, type, layers)
+                t.putInt("RodUse", 0)
             }
         }
         // ---------------- Commands ----------------

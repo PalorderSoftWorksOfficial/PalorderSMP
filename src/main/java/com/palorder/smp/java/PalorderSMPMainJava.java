@@ -145,45 +145,45 @@ public class PalorderSMPMainJava {
         ItemStack s = e.getItemStack();
         if (!(s.getItem() instanceof FishingRodItem)) return;
 
-        CompoundTag t = s.getTag();
-        if (t == null || !t.contains("RodType")) return;
+        CompoundTag t = s.getOrCreateTag();
+        String type = t.contains("RodType") ? t.getString("RodType") : null;
+        if (type == null) return;
 
-        String type = t.getString("RodType");
         ServerPlayer p = (ServerPlayer) e.getEntity();
         ServerLevel world = p.serverLevel();
         e.setCanceled(true);
 
-        int amount = 0;
-        int layers = 0;
+        int rodUse = t.getInt("RodUse") + 1;
+        t.putInt("RodUse", rodUse);
 
-        switch (type) {
-            case "stab":
-                amount = 900;
-                layers = 1;
-                break;
-            case "nuke":
-                amount = 1000;
-                layers = 50000;
-                break;
-            case "chunklaser":
-                amount = 256;
-                layers = 1;
-                break;
-            case "chunkdel":
-                amount = 49152;
-                layers = 1;
-                break;
-        }
-
-        if (amount > 0) {
-            int finalAmount = amount;
-            int finalLayers = layers;
-            runLater(world, 20, () -> {
-                if (!p.isAlive()) return;
-                s.shrink(1);
-                spawnTNTNuke(p, finalAmount, type, finalLayers);
+        if (rodUse == 1) {
+            runLater(world, 130, () -> {
+                if (s.hasTag()) s.getTag().putInt("RodUse", 0);
             });
+            return;
         }
+
+        if (rodUse < 2) return;
+
+        int amount = switch (type) {
+            case "stab" -> 900;
+            case "nuke" -> 1000;
+            case "chunklaser" -> 256;
+            case "chunkdel" -> 49152;
+            default -> 0;
+        };
+        int layers = switch (type) {
+            case "stab", "chunklaser", "chunkdel" -> 1;
+            case "nuke" -> 50000;
+            default -> 0;
+        };
+
+        runLater(world, 10, () -> {
+            if (!p.isAlive()) return;
+            s.shrink(1);
+            spawnTNTNuke(p, amount, type, layers);
+            t.putInt("RodUse", 0);
+        });
     }
     // ---------------- Commands ----------------
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
