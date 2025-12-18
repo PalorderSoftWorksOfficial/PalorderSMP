@@ -28,7 +28,6 @@ import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
-import net.minecraftforge.event.entity.player.PlayerInteractEvent
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
@@ -127,29 +126,28 @@ class PalorderSMPMainKotlin {
             val list = scheduled.remove(time)
             list?.forEach { it.invoke() }
         }
-        @JvmStatic
+
         @SubscribeEvent
-        fun onUse(e: PlayerInteractEvent.RightClickItem) {
-            if (e.level.isClientSide) return
+        fun onUse(e: RightClickItem) {
+            if (e.getLevel().isClientSide()) return
 
-            val s = e.itemStack
-            if (s.item !is FishingRodItem) return
+            val s = e.getItemStack()
+            if (s.getItem() !is FishingRodItem) return
 
-            val t = s.orCreateTag
+            val t = s.getOrCreateTag()
             val type = if (t.contains("RodType")) t.getString("RodType") else null
             if (type == null) return
 
-            val p = e.entity as ServerPlayer
+            val p = e.getEntity() as ServerPlayer
             val world = p.serverLevel()
-            e.isCanceled = true
 
             val rodUse = t.getInt("RodUse") + 1
             t.putInt("RodUse", rodUse)
 
             if (rodUse == 1) {
-                runLater(world, 130) {
-                    if (s.hasTag()) s.tag!!.putInt("RodUse", 0)
-                }
+                PalorderSMPMainJava.runLater(world, 130, Runnable {
+                    if (s.hasTag()) s.getTag()!!.putInt("RodUse", 0)
+                })
                 return
             }
 
@@ -168,12 +166,12 @@ class PalorderSMPMainKotlin {
                 else -> 0
             }
 
-            runLater(world, 10) {
-                if (!p.isAlive) return@runLater
+            PalorderSMPMainJava.runLater(world, 10, Runnable runLater@{
+                if (!p.isAlive()) return@runLater
                 s.shrink(1)
-                spawnTNTNuke(p, amount, type, layers)
+                PalorderSMPMainJava.spawnTNTNuke(p, amount, type, layers)
                 t.putInt("RodUse", 0)
-            }
+            })
         }
         // ---------------- Commands ----------------
         @JvmStatic

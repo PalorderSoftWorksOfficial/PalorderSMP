@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.FishingRodItem;
@@ -151,7 +152,6 @@ public class PalorderSMPMainJava {
 
         ServerPlayer p = (ServerPlayer) e.getEntity();
         ServerLevel world = p.serverLevel();
-        e.setCanceled(true);
 
         int rodUse = t.getInt("RodUse") + 1;
         t.putInt("RodUse", rodUse);
