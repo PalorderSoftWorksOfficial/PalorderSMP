@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.projectile.Arrow
 import net.minecraft.world.item.FishingRodItem
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -28,6 +29,7 @@ import net.minecraftforge.api.distmarker.Dist
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
+import net.minecraftforge.event.entity.player.PlayerInteractEvent
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
@@ -128,50 +130,57 @@ class PalorderSMPMainKotlin {
         }
 
         @SubscribeEvent
-        fun onUse(e: RightClickItem) {
-            if (e.getLevel().isClientSide()) return
+        fun onUse(e: PlayerInteractEvent.RightClickItem) {
+            if (e.level.isClientSide) return
 
-            val s = e.getItemStack()
-            if (s.getItem() !is FishingRodItem) return
+            val s = e.itemStack
+            if (s.item !is FishingRodItem) return
 
-            val t = s.getOrCreateTag()
+            val t = s.orCreateTag
             val type = if (t.contains("RodType")) t.getString("RodType") else null
             if (type == null) return
 
-            val p = e.getEntity() as ServerPlayer
+            val p = e.entity as ServerPlayer
             val world = p.serverLevel()
 
             val rodUse = t.getInt("RodUse") + 1
             t.putInt("RodUse", rodUse)
 
             if (rodUse == 1) {
-                PalorderSMPMainJava.runLater(world, 130, Runnable {
-                    if (s.hasTag()) s.getTag()!!.putInt("RodUse", 0)
-                })
+                runLater(world, 130) {
+                    if (s.hasTag()) s.tag!!.putInt("RodUse", 0)
+                }
                 return
             }
 
             if (rodUse < 2) return
 
             val amount = when (type) {
-                "stab" -> 900
-                "nuke" -> 1000
+                "stab", "ArrowStab" -> 900
+                "nuke", "ArrowNuke" -> 1000
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
                 else -> 0
             }
+
             val layers = when (type) {
-                "stab", "chunklaser", "chunkdel" -> 1
+                "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
                 "nuke" -> 50000
                 else -> 0
             }
 
-            PalorderSMPMainJava.runLater(world, 10, Runnable runLater@{
-                if (!p.isAlive()) return@runLater
+            runLater(world, 10) {
+                if (!p.isAlive) return@runLater
                 s.shrink(1)
-                PalorderSMPMainJava.spawnTNTNuke(p, amount, type, layers)
+
+                if (type == "ArrowNuke" || type == "ArrowStab") {
+                    spawnArrowTNTNuke(p, amount, type)
+                } else {
+                    spawnTNTNuke(p, amount, type, layers)
+                }
+
                 t.putInt("RodUse", 0)
-            })
+            }
         }
         // ---------------- Commands ----------------
         @JvmStatic
@@ -621,7 +630,88 @@ class PalorderSMPMainKotlin {
                 player.sendSystemMessage(Component.literal("Orbital strike launched! Type: $type, Total: $total"))
             }
         }
+        fun spawnArrowTNTNuke(player: ServerPlayer, tnts: Int?, type: String) {
+            val world = player.level() as ServerLevel
 
+            val eyePos = player.getEyePosition(1.0f)
+            val lookVec = player.lookAngle
+            val end = eyePos.add(lookVec.scale(100000.0))
+
+            val hit = world.clip(
+                ClipContext(
+                    eyePos, end,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+                )
+            )
+
+            val targetPos = hit?.location ?: end
+
+            val total = if (tnts != null && tnts > 0) tnts else 100
+
+            world.server.execute {
+                if (type == "ArrowStab") {
+                    val freezeY = 50.0
+
+                    val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z)
+                    arrow.isNoGravity = true
+                    arrow.deltaMovement = Vec3.ZERO
+                    arrow.baseDamage = 1000.0
+                    world.addFreshEntity(arrow)
+
+                    for (i in 0 until total) {
+                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
+                        if (tnt != null) {
+                            tnt.setPos(
+                                arrow.x,
+                                arrow.y + 0.5 + (i * 0.5),
+                                arrow.z
+                            )
+                            tnt.fuse = 0
+                            tnt.isNoGravity = true
+                            tnt.downForce = 20f
+                            tnt.setExplosionRadius(4.0)
+                            world.addFreshEntity(tnt)
+                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                        }
+                    }
+
+                    world.server.execute {
+                        arrow.isNoGravity = false
+                        arrow.setDeltaMovement(0.0, -5.0, 0.0)
+                    }
+                } else if (type == "ArrowNuke") {
+                    for (a in 0 until total) {
+                        val arrow = Arrow(world, player)
+                        arrow.setPos(player.x, player.eyeY, player.z)
+                        arrow.shootFromRotation(player, player.xRot, player.yRot, 0.0f, 5.0f, 0.0f)
+                        arrow.baseDamage = 500.0
+                        arrow.pierceLevel = 127.toByte()
+                        arrow.isCritArrow = true
+                        world.addFreshEntity(arrow)
+
+                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
+                        if (tnt != null) {
+                            tnt.setPos(
+                                arrow.x,
+                                arrow.y + 0.1,
+                                arrow.z
+                            )
+                            tnt.fuse = 0
+                            tnt.isNoGravity = true
+                            tnt.setExplosionRadius(2.0)
+                            world.addFreshEntity(tnt)
+                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                        }
+                    }
+                }
+
+                player.sendSystemMessage(
+                    Component.literal("Arrow TNT Nuke launched! Type: $type, Count: $total")
+                )
+            }
+        }
         // ---------------- Derender TNT safely ----------------
         @Deprecated(
             message = "This method is unsafe in the main thread, separate it from the main thread or just don't use it, DO NOT USE!",

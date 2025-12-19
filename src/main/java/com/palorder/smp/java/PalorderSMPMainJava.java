@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -166,14 +167,15 @@ public class PalorderSMPMainJava {
         if (rodUse < 2) return;
 
         int amount = switch (type) {
-            case "stab" -> 900;
-            case "nuke" -> 1000;
+            case "stab", "ArrowStab" -> 900;
+            case "nuke", "ArrowNuke" -> 1000;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
             default -> 0;
         };
+
         int layers = switch (type) {
-            case "stab", "chunklaser", "chunkdel" -> 1;
+            case "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1;
             case "nuke" -> 50000;
             default -> 0;
         };
@@ -181,7 +183,14 @@ public class PalorderSMPMainJava {
         runLater(world, 10, () -> {
             if (!p.isAlive()) return;
             s.shrink(1);
-            spawnTNTNuke(p, amount, type, layers);
+
+            if ("ArrowNuke".equals(type) || "ArrowStab".equals(type)) {
+                spawnArrowTNTNuke(p, amount, type);
+            }
+            else {
+                spawnTNTNuke(p, amount, type, layers);
+            }
+
             t.putInt("RodUse", 0);
         });
     }
@@ -586,7 +595,92 @@ public class PalorderSMPMainJava {
             player.sendSystemMessage(Component.literal("Orbital strike launched! Type: " + type + ", Total: " + total));
         });
     }
+    public static void spawnArrowTNTNuke(ServerPlayer player, Integer tnts, String type) {
+        ServerLevel world = (ServerLevel) player.level();
 
+        Vec3 eyePos = player.getEyePosition(1.0F);
+        Vec3 lookVec = player.getLookAngle();
+        Vec3 end = eyePos.add(lookVec.scale(100000.0));
+
+        BlockHitResult hit = world.clip(new ClipContext(
+                eyePos, end,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                player
+        ));
+
+        Vec3 targetPos = hit != null ? hit.getLocation() : end;
+
+        int total = (tnts != null && tnts > 0) ? tnts : 100;
+
+        world.getServer().execute(() -> {
+
+            if ("ArrowStab".equals(type)) {
+
+                double freezeY = 50.0;
+
+                Arrow arrow = new Arrow(world, targetPos.x, freezeY, targetPos.z);
+                arrow.setNoGravity(true);
+                arrow.setDeltaMovement(Vec3.ZERO);
+                arrow.setBaseDamage(1000.0);
+                world.addFreshEntity(arrow);
+
+                for (int i = 0; i < total; i++) {
+                    PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                    if (tnt != null) {
+                        tnt.setPos(
+                                arrow.getX(),
+                                arrow.getY() + 0.5 + (i * 0.5),
+                                arrow.getZ()
+                        );
+                        tnt.setFuse(0);
+                        tnt.setNoGravity(true);
+                        tnt.setDownForce(20f);
+                        tnt.setExplosionRadius(4);
+                        world.addFreshEntity(tnt);
+                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                    }
+                }
+
+                world.getServer().execute(() -> {
+                    arrow.setNoGravity(false);
+                    arrow.setDeltaMovement(0, -5, 0);
+                });
+            }
+
+            else if ("ArrowNuke".equals(type)) {
+
+                for (int a = 0; a < total; a++) {
+
+                    Arrow arrow = new Arrow(world, player);
+                    arrow.setPos(player.getX(), player.getEyeY(), player.getZ());
+                    arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 5.0F, 0.0F);
+                    arrow.setBaseDamage(500.0);
+                    arrow.setPierceLevel((byte) 127);
+                    arrow.setCritArrow(true);
+                    world.addFreshEntity(arrow);
+
+                    PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                    if (tnt != null) {
+                        tnt.setPos(
+                                arrow.getX(),
+                                arrow.getY() + 0.1,
+                                arrow.getZ()
+                        );
+                        tnt.setFuse(0);
+                        tnt.setNoGravity(true);
+                        tnt.setExplosionRadius(2);
+                        world.addFreshEntity(tnt);
+                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                    }
+                }
+            }
+
+            player.sendSystemMessage(Component.literal(
+                    "Arrow TNT Nuke launched! Type: " + type + ", Count: " + total
+            ));
+        });
+    }
     // ---------------- Derender TNT safely ----------------
     /**
      * @deprecated This method is unsafe in the main thread, separate it from the main thread or just don't use it, DO NOT USE!
