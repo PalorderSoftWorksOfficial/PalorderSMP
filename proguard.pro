@@ -18,6 +18,10 @@
     public static void check(...);
 }
 
+-keep class com.palorder.smp.java.PrimedTntExtendedAPI { *; }
+
+-keep class com.palorder.smp.kotlin.PrimedTntExtendedAPI { *; }
+
 -allowaccessmodification
 -useuniqueclassmembernames
 -overloadaggressively
