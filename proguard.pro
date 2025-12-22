@@ -14,6 +14,10 @@
 -keep class kotlin.Metadata { *; }
 -dontwarn kotlin.**
 
+-keepclassmembers class com.palorder.smp.security.NoMixin {
+    public static void check(...);
+}
+
 -allowaccessmodification
 -useuniqueclassmembernames
 -overloadaggressively
