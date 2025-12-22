@@ -156,8 +156,8 @@ class PalorderSMPMainKotlin {
             if (rodUse < 2) return
 
             val amount = when (type) {
-                "stab", "ArrowStab" -> 900
-                "nuke", "ArrowNuke" -> 1000
+                "stab", "ArrowStab" -> 1800
+                "nuke", "ArrowNuke" -> 2000
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
                 else -> 0
@@ -165,7 +165,7 @@ class PalorderSMPMainKotlin {
 
             val layers = when (type) {
                 "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
-                "nuke" -> 50000
+                "nuke" -> 90000
                 else -> 0
             }
 
@@ -341,7 +341,7 @@ class PalorderSMPMainKotlin {
                                 Commands.argument<String?>("type", StringArgumentType.string())
                                     .suggests(SuggestionProvider { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
                                         SharedSuggestionProvider.suggest(
-                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel"),
+                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab"),
                                             builder
                                         )
                                     })
@@ -518,7 +518,7 @@ class PalorderSMPMainKotlin {
                                 tnt.setPos(targetPos.x, y, targetPos.z)
                                 tnt.fuse = 0
                                 tnt.isNoGravity = true
-                                tnt.setDamageForEntityType(EntityType.PLAYER, 100000f)
+                                tnt.setDamage(100000f)
                                 tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                 tnt.setExplosionRadius(16.0)
                                 world.addFreshEntity(tnt)
@@ -551,6 +551,7 @@ class PalorderSMPMainKotlin {
                                             tnt.setNoGravity(true)
                                             tnt.setDeltaMovement(0.0, 0.0, 0.0)
                                             tnt.setExplosionRadius(1.0)
+                                            tnt.setDamage(1000f)
                                             world.addFreshEntity(tnt)
                                             nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                                             placed++
@@ -592,7 +593,7 @@ class PalorderSMPMainKotlin {
                     "nuke" -> {
                         val spawnHeight = targetPos.y + 30.0
                         val layerStepY = 1.0
-                        val spacing = 1.5
+                        val spacing = 3
                         var spawned = 0
                         for (layer in 0 until layersFinal) {
                             if (spawned >= total) break
@@ -637,73 +638,67 @@ class PalorderSMPMainKotlin {
             val lookVec = player.lookAngle
             val end = eyePos.add(lookVec.scale(100000.0))
 
-            val hit = world.clip(
-                ClipContext(
-                    eyePos, end,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-                )
-            )
+            val hit = world.clip(ClipContext(
+                eyePos, end,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                player
+            ))
 
             val targetPos = hit?.location ?: end
-
-            val total = if (tnts != null && tnts > 0) tnts else 100
+            val total = tnts?.takeIf { it > 0 } ?: 100
 
             world.server.execute {
-                if (type == "ArrowStab") {
-                    val freezeY = 50.0
 
-                    val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z)
-                    arrow.isNoGravity = true
-                    arrow.deltaMovement = Vec3.ZERO
-                    arrow.baseDamage = 1000.0
+                if (type == "ArrowStab") {
+
+                    val freezeY = 50.0
+                    val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z).apply {
+                        isNoGravity = true
+                        deltaMovement = Vec3.ZERO
+                        pierceLevel = 127.toByte()
+                        isCritArrow = true
+                    }
                     world.addFreshEntity(arrow)
 
-                    for (i in 0 until total) {
-                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
-                        if (tnt != null) {
-                            tnt.setPos(
-                                arrow.x,
-                                arrow.y + 0.5 + (i * 0.5),
-                                arrow.z
-                            )
-                            tnt.fuse = 0
-                            tnt.isNoGravity = true
-                            tnt.downForce = 20f
-                            tnt.setExplosionRadius(4.0)
-                            world.addFreshEntity(tnt)
-                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                    repeat(total) { i ->
+                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world).apply {
+                            setPos(arrow.x, freezeY + 1.0 + i * 0.5, arrow.z)
+                            fuse = 1
+                            isNoGravity = true
+                            downForce = 40f
+                            setExplosionRadius(4.0)
                         }
+                        world.addFreshEntity(tnt)
+                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                     }
 
                     world.server.execute {
                         arrow.isNoGravity = false
-                        arrow.setDeltaMovement(0.0, -5.0, 0.0)
+                        arrow.deltaMovement = Vec3(0.0, -20.0, 0.0)
                     }
-                } else if (type == "ArrowNuke") {
-                    for (a in 0 until total) {
-                        val arrow = Arrow(world, player)
-                        arrow.setPos(player.x, player.eyeY, player.z)
-                        arrow.shootFromRotation(player, player.xRot, player.yRot, 0.0f, 5.0f, 0.0f)
-                        arrow.baseDamage = 500.0
-                        arrow.pierceLevel = 127.toByte()
-                        arrow.isCritArrow = true
+                }
+
+                else if (type == "ArrowNuke") {
+
+                    repeat(total) {
+                        val arrow = Arrow(world, player).apply {
+                            setPos(player.x, player.eyeY, player.z)
+                            shootFromRotation(player, player.xRot, player.yRot, 0.0f, 5.0f, 0.0f)
+                            pierceLevel = 127.toByte()
+                            isCritArrow = true
+                        }
                         world.addFreshEntity(arrow)
 
-                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
-                        if (tnt != null) {
-                            tnt.setPos(
-                                arrow.x,
-                                arrow.y + 0.1,
-                                arrow.z
-                            )
-                            tnt.fuse = 0
-                            tnt.isNoGravity = true
-                            tnt.setExplosionRadius(2.0)
-                            world.addFreshEntity(tnt)
-                            nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world).apply {
+                            setPos(arrow.x, arrow.y + 1.0, arrow.z)
+                            fuse = 1
+                            isNoGravity = true
+                            downForce = 40f
+                            setExplosionRadius(3.0)
                         }
+                        world.addFreshEntity(tnt)
+                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                     }
                 }
 

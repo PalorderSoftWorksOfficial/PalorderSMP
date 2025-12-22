@@ -167,8 +167,8 @@ public class PalorderSMPMainJava {
         if (rodUse < 2) return;
 
         int amount = switch (type) {
-            case "stab", "ArrowStab" -> 900;
-            case "nuke", "ArrowNuke" -> 1000;
+            case "stab", "ArrowStab" -> 1800;
+            case "nuke", "ArrowNuke" -> 2000;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
             default -> 0;
@@ -176,7 +176,7 @@ public class PalorderSMPMainJava {
 
         int layers = switch (type) {
             case "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1;
-            case "nuke" -> 50000;
+            case "nuke" -> 90000;
             default -> 0;
         };
 
@@ -351,7 +351,7 @@ public class PalorderSMPMainJava {
                 .then(Commands.argument("target", StringArgumentType.word())
                         .then(Commands.argument("type", StringArgumentType.string())
                                 .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel"), builder))
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab"), builder))
                                 .executes(context -> {
                                     ServerPlayer p = context.getSource().getPlayer();
                                     String type = StringArgumentType.getString(context, "type");
@@ -498,7 +498,7 @@ public class PalorderSMPMainJava {
                         tnt.setFuse(0);
                         tnt.setNoGravity(true);
                         tnt.setDeltaMovement(0.0, 0.0, 0.0);
-                        tnt.setDamageForEntityType(EntityType.PLAYER,100000);
+                        tnt.setDamage(100000);
                         tnt.setExplosionRadius(16);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
@@ -529,6 +529,7 @@ public class PalorderSMPMainJava {
                                     tnt.setNoGravity(true);
                                     tnt.setDeltaMovement(0.0, 0.0, 0.0);
                                     tnt.setExplosionRadius(1);
+                                    tnt.setDamage(1000f);
                                     world.addFreshEntity(tnt);
                                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                                     placed++;
@@ -566,7 +567,7 @@ public class PalorderSMPMainJava {
             else if ("nuke".equals(type)) {
                 double spawnHeight = targetPos.y + 30;
                 double layerStepY = 1.0;
-                double spacing = 1.5;
+                double spacing = 3;
                 int spawned = 0;
                 for (int layer = 0; layer < layersFinal && spawned < total; layer++) {
                     double y = spawnHeight + layer * layerStepY;
@@ -610,7 +611,6 @@ public class PalorderSMPMainJava {
         ));
 
         Vec3 targetPos = hit != null ? hit.getLocation() : end;
-
         int total = (tnts != null && tnts > 0) ? tnts : 100;
 
         world.getServer().execute(() -> {
@@ -622,7 +622,8 @@ public class PalorderSMPMainJava {
                 Arrow arrow = new Arrow(world, targetPos.x, freezeY, targetPos.z);
                 arrow.setNoGravity(true);
                 arrow.setDeltaMovement(Vec3.ZERO);
-                arrow.setBaseDamage(1000.0);
+                arrow.setPierceLevel((byte)127);
+                arrow.setCritArrow(true);
                 world.addFreshEntity(arrow);
 
                 for (int i = 0; i < total; i++) {
@@ -630,12 +631,12 @@ public class PalorderSMPMainJava {
                     if (tnt != null) {
                         tnt.setPos(
                                 arrow.getX(),
-                                arrow.getY() + 0.5 + (i * 0.5),
+                                freezeY + 1.0 + i * 0.5,
                                 arrow.getZ()
                         );
-                        tnt.setFuse(0);
+                        tnt.setFuse(1);
                         tnt.setNoGravity(true);
-                        tnt.setDownForce(20f);
+                        tnt.setDownForce(40f);
                         tnt.setExplosionRadius(4);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
@@ -644,7 +645,7 @@ public class PalorderSMPMainJava {
 
                 world.getServer().execute(() -> {
                     arrow.setNoGravity(false);
-                    arrow.setDeltaMovement(0, -5, 0);
+                    arrow.setDeltaMovement(0.0, -20.0, 0.0);
                 });
             }
 
@@ -655,8 +656,7 @@ public class PalorderSMPMainJava {
                     Arrow arrow = new Arrow(world, player);
                     arrow.setPos(player.getX(), player.getEyeY(), player.getZ());
                     arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 5.0F, 0.0F);
-                    arrow.setBaseDamage(500.0);
-                    arrow.setPierceLevel((byte) 127);
+                    arrow.setPierceLevel((byte)127);
                     arrow.setCritArrow(true);
                     world.addFreshEntity(arrow);
 
@@ -664,12 +664,13 @@ public class PalorderSMPMainJava {
                     if (tnt != null) {
                         tnt.setPos(
                                 arrow.getX(),
-                                arrow.getY() + 0.1,
+                                arrow.getY() + 1.0,
                                 arrow.getZ()
                         );
-                        tnt.setFuse(0);
+                        tnt.setFuse(1);
                         tnt.setNoGravity(true);
-                        tnt.setExplosionRadius(2);
+                        tnt.setDownForce(40f);
+                        tnt.setExplosionRadius(3);
                         world.addFreshEntity(tnt);
                         nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }
