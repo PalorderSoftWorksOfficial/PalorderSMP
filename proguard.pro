@@ -1,6 +1,5 @@
 -keep @net.minecraftforge.fml.common.Mod class * {
-    <fields>;
-    <methods>;
+    <init>(...);
 }
 
 -keepclassmembers class * {
