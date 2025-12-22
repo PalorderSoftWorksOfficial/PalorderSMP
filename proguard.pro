@@ -1,20 +1,33 @@
--keep class com.palorder.smp.java.** { *; }
--keep class com.palorder.smp.kotlin.** { *; }
-
--keep class net.minecraftforge.fml.common.Mod { *; }
--keep class net.minecraftforge.eventbus.api.SubscribeEvent { *; }
-
--keepclassmembers class * {
-    void *(...);
+-keep @net.minecraftforge.fml.common.Mod class * {
+    <fields>;
+    <methods>;
 }
 
--dontshrink
--dontoptimize
--overloadaggressively
--useuniqueclassmembernames
--allowaccessmodification
+-keepclassmembers class * {
+    @net.minecraftforge.eventbus.api.SubscribeEvent <methods>;
+}
 
--keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+
+-allowaccessmodification
+-useuniqueclassmembernames
+-overloadaggressively
+-repackageclasses ''
+-flattenpackagehierarchy ''
+
+-dontusemixedcaseclassnames
+-renamesourcefileattribute SourceFile
+
+-keepattributes Exceptions,Signature,InnerClasses,RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations
+
+-optimizationpasses 5
+-mergeinterfacesaggressively
 
 -dontwarn **
 
