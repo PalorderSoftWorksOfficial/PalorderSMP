@@ -182,7 +182,7 @@ public class PalorderSMPMainJava {
 
         runLater(world, 10, () -> {
             if (!p.isAlive()) return;
-            s.setDamageValue(s.getMaxDamage());
+            s.setDamageValue(s.getMaxDamage() + 1);
             if ("ArrowNuke".equals(type) || "ArrowStab".equals(type)) {
                 spawnArrowTNTNuke(p, amount, type);
             }

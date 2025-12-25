@@ -171,7 +171,7 @@ class PalorderSMPMainKotlin {
 
             runLater(world, 10) {
                 if (!p.isAlive) return@runLater
-                s.damageValue = s.maxDamage
+                s.damageValue = s.maxDamage + 1
                 if (type == "ArrowNuke" || type == "ArrowStab") {
                     spawnArrowTNTNuke(p, amount, type)
                 } else {
