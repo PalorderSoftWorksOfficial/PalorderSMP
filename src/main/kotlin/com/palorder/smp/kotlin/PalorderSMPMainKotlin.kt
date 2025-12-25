@@ -171,7 +171,6 @@ class PalorderSMPMainKotlin {
 
             runLater(world, 10) {
                 if (!p.isAlive) return@runLater
-                s.shrink(1)
 
                 if (type == "ArrowNuke" || type == "ArrowStab") {
                     spawnArrowTNTNuke(p, amount, type)
@@ -353,6 +352,7 @@ class PalorderSMPMainKotlin {
                                         if (i.getItem() !is FishingRodItem) return@executes 0
                                         i.getOrCreateTag().putString("RodType", type)
                                         i.setHoverName(Component.literal(type + " shot"))
+                                        i.damageValue = i.maxDamage - 1
                                         1
                                     })
                             )
