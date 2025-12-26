@@ -182,7 +182,6 @@ public class PalorderSMPMainJava {
 
         runLater(world, 10, () -> {
             if (!p.isAlive()) return;
-            s.setDamageValue(s.getMaxDamage() + 1);
             if ("ArrowNuke".equals(type) || "ArrowStab".equals(type)) {
                 spawnArrowTNTNuke(p, amount, type);
             }
@@ -359,7 +358,7 @@ public class PalorderSMPMainJava {
                                     if (!(i.getItem() instanceof FishingRodItem)) return 0;
                                     i.getOrCreateTag().putString("RodType", type);
                                     i.setHoverName(Component.literal(type + " shot"));
-                                    i.setDamageValue(i.getMaxDamage() - 1);
+                                    i.setDamageValue(i.getMaxDamage());
                                     return 1;
                                 })
                         )));
