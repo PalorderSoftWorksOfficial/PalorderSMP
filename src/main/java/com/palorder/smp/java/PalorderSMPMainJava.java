@@ -22,6 +22,7 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
@@ -61,8 +62,11 @@ import java.util.concurrent.TimeUnit;
 
 // Detail providers & registries (for item/block detail exposed to computers)
 // :contentReference[oaicite:6]{index=6}
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import javax.swing.*;
 
 @Mod("palordersmp_tweaked")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -121,7 +125,18 @@ public class PalorderSMPMainJava {
         }
 
     }
-
+    // client setup
+    @OnlyIn(Dist.CLIENT)
+    private void clientSetup(FMLClientSetupEvent event) {
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Admin panel");
+            frame.setSize(400, 200);
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            JLabel label = new JLabel("Haiii, FUCK FUCVKAKOHJOEROIHHEAI9ORHEORNIO FUCK CHATGPT I CANT MAKE THIS SHIT BECAUSE THAT STUPID ASS NIGGER WONT DO SHIT FUCK YOU CHATGPT", SwingConstants.CENTER);
+            frame.add(label);
+            frame.setVisible(true);
+        });
+    }
     // ---------------- Server Events ----------------
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
