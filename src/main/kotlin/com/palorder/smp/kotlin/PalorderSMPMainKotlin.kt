@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.projectile.AbstractArrow
 import net.minecraft.world.entity.projectile.Arrow
 import net.minecraft.world.item.FishingRodItem
 import net.minecraft.world.item.ItemStack
@@ -588,34 +589,45 @@ class PalorderSMPMainKotlin {
                         }
                     }
 
-
                     "nuke" -> {
-                        val spawnHeight = targetPos.y + 30.0
-                        val layerStepY = 1.0
-                        val spacing = 3
+                        val baseFuse = 80
+                        val gravity = -0.03
+                        val velocityMultiplier = 1.4
+                        val baseRadii = intArrayOf(12, 22, 32, 42, 52, 62, 72, 82, 92, 102)
+
+                        val fallHeight = 0.5 * -gravity * baseFuse * baseFuse
+                        val spawnY = targetPos.y + fallHeight
+
                         var spawned = 0
-                        for (layer in 0 until layersFinal) {
-                            if (spawned >= total) break
-                            val y = spawnHeight + layer * layerStepY
-                            for (ring in 1..5) {
+
+                        val center = PrimedTntExtendedAPI(EntityType.TNT, world)
+                        center.setPos(targetPos.x + 0.5, spawnY, targetPos.z + 0.5)
+                        center.setFuse(baseFuse)
+                        center.deltaMovement = Vec3(0.0, 0.0, 0.0)
+                        world.addFreshEntity(center)
+                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(center)
+                        spawned++
+
+                        while (spawned < total) {
+                            for (r in baseRadii) {
                                 if (spawned >= total) break
-                                val radius = ring * 3.0 * (layer + 1)
-                                val tntsInRing = kotlin.math.floor(2 * Math.PI * radius / spacing).toInt()
+                                val tntsInRing = minOf(100, total - spawned)
+
                                 for (i in 0 until tntsInRing) {
                                     if (spawned >= total) break
-                                    val angle = 2 * Math.PI * i / tntsInRing
-                                    val x = targetPos.x + kotlin.math.cos(angle) * radius
-                                    val z = targetPos.z + kotlin.math.sin(angle) * radius
+                                    val angle = Math.random() * 2.0 * Math.PI
+                                    val dx = kotlin.math.cos(angle)
+                                    val dz = kotlin.math.sin(angle)
+                                    val vx = dx * (r / baseFuse) * velocityMultiplier
+                                    val vz = dz * (r / baseFuse) * velocityMultiplier
+
                                     val tnt = PrimedTntExtendedAPI(EntityType.TNT, world)
-                                    if (tnt != null) {
-                                        tnt.setPos(x, y, z)
-                                        tnt.setFuse(100)
-                                        tnt.setNoGravity(false)
-                                        tnt.downForce = 10f
-                                        world.addFreshEntity(tnt)
-                                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
-                                        spawned++
-                                    }
+                                    tnt.setPos(targetPos.x + 0.5, spawnY, targetPos.z + 0.5)
+                                    tnt.setFuse(baseFuse)
+                                    tnt.deltaMovement = Vec3(vx, 0.0, vz)
+                                    world.addFreshEntity(tnt)
+                                    nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
+                                    spawned++
                                 }
                             }
                         }
@@ -648,58 +660,63 @@ class PalorderSMPMainKotlin {
             val total = tnts?.takeIf { it > 0 } ?: 100
 
             world.server.execute {
+                when (type) {
+                    "ArrowNuke" -> {
+                        val baseRadii = intArrayOf(12,22,32,42,52,62,72,82,92,102)
+                        var spawned = 0
 
-                if (type == "ArrowStab") {
+                        var ringIndex = 0
+                        while (spawned < total) {
+                            val r = if (ringIndex < baseRadii.size) baseRadii[ringIndex] else 98 + (ringIndex - baseRadii.size + 1) * 10
+                            val arrowsInRing = when {
+                                ringIndex == 0 -> 84
+                                ringIndex == 1 -> 50
+                                ringIndex in 2..5 -> 70
+                                ringIndex == 6 -> 90
+                                else -> minOf(100, (r*2 - ringIndex*1.2).toInt())
+                            }
 
-                    val freezeY = 50.0
-                    val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z).apply {
-                        isNoGravity = true
-                        deltaMovement = Vec3.ZERO
-                        pierceLevel = 127.toByte()
-                        isCritArrow = true
-                    }
-                    world.addFreshEntity(arrow)
+                            for (i in 0 until arrowsInRing) {
+                                if (spawned >= total) break
+                                val angle = Math.random() * 2.0 * Math.PI
+                                val dx = kotlin.math.cos(angle)
+                                val dz = kotlin.math.sin(angle)
+                                val vx = dx * (r / 80.0) * 1.4
+                                val vz = dz * (r / 80.0) * 1.4
 
-                    repeat(total) { i ->
-                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world).apply {
-                            setPos(arrow.x, freezeY + 1.0 + i * 0.5, arrow.z)
-                            fuse = 1
-                            isNoGravity = true
-                            downForce = 40f
-                            setExplosionRadius(4.0)
+                                val arrow = Arrow(world, player)
+                                arrow.setPos(player.x, player.eyeY, player.z)
+                                arrow.deltaMovement = Vec3(vx, 0.0, vz)
+                                arrow.isNoGravity = false
+                                arrow.pierceLevel = 127.toByte()
+                                arrow.isCritArrow = true
+                                arrow.pickup = AbstractArrow.Pickup.DISALLOWED
+                                world.addFreshEntity(arrow)
+                                spawned++
+                            }
+
+                            ringIndex++
                         }
-                        world.addFreshEntity(tnt)
-                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                     }
 
-                    world.server.execute {
-                        arrow.isNoGravity = false
-                        arrow.deltaMovement = Vec3(0.0, -20.0, 0.0)
-                    }
-                }
+                    "ArrowStab" -> {
+                        val freezeY = 50.0
 
-                else if (type == "ArrowNuke") {
-
-                    repeat(total) {
-                        val arrow = Arrow(world, player).apply {
-                            setPos(player.x, player.eyeY, player.z)
-                            shootFromRotation(player, player.xRot, player.yRot, 0.0f, 5.0f, 0.0f)
-                            pierceLevel = 127.toByte()
-                            isCritArrow = true
-                        }
+                        val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z)
+                        arrow.isNoGravity = true
+                        arrow.deltaMovement = Vec3.ZERO
+                        arrow.pierceLevel = 127.toByte()
+                        arrow.isCritArrow = true
+                        arrow.pickup = AbstractArrow.Pickup.DISALLOWED
                         world.addFreshEntity(arrow)
 
-                        val tnt = PrimedTntExtendedAPI(EntityType.TNT, world).apply {
-                            setPos(arrow.x, arrow.y + 1.0, arrow.z)
-                            fuse = 1
-                            isNoGravity = true
-                            downForce = 40f
-                            setExplosionRadius(3.0)
+                        world.server.execute {
+                            arrow.isNoGravity = false
+                            arrow.deltaMovement = Vec3(0.0, -20.0, 0.0)
                         }
-                        world.addFreshEntity(tnt)
-                        nukeSpawnedEntities.computeIfAbsent(world) { HashSet() }.add(tnt)
                     }
                 }
+
 
                 player.sendSystemMessage(
                     Component.literal("Arrow TNT Nuke launched! Type: $type, Count: $total")
