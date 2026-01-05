@@ -685,7 +685,7 @@ class PalorderSMPMainKotlin {
                                 val vz = dz * (r / 80.0) * 1.4
 
                                 val arrow = Arrow(world, player)
-                                arrow.setPos(targetPos.x, 30.0, targetPos.z)
+                                arrow.setPos(targetPos.x, 20.0, targetPos.z)
                                 arrow.deltaMovement = Vec3(vx, 0.0, vz)
                                 arrow.isNoGravity = false
                                 arrow.pierceLevel = 127.toByte()
@@ -712,7 +712,7 @@ class PalorderSMPMainKotlin {
 
                         world.server.execute {
                             arrow.isNoGravity = false
-                            arrow.deltaMovement = Vec3(0.0, -20.0, 0.0)
+                            arrow.deltaMovement = Vec3(0.0, (-Integer.MAX_VALUE).toDouble(), 0.0)
                         }
                     }
                 }

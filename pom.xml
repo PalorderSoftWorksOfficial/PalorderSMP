@@ -6,6 +6,6 @@
 
     <groupId>com.palorder.smp.java</groupId>
     <artifactId>palordersmp-tweaked</artifactId>
-    <version>4.1</version>
+    <version>4.5</version>
     <packaging>jar</packaging>
 </project>

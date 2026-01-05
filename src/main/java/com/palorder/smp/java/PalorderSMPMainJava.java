@@ -648,7 +648,7 @@ public class PalorderSMPMainJava {
 
             if ("ArrowStab".equals(type)) {
 
-                double freezeY = 50.0;
+                double freezeY = 20.0;
 
                 Arrow arrow = new Arrow(world, targetPos.x, freezeY, targetPos.z);
                 arrow.setNoGravity(true);
@@ -660,7 +660,7 @@ public class PalorderSMPMainJava {
 
                 world.getServer().execute(() -> {
                     arrow.setNoGravity(false);
-                    arrow.setDeltaMovement(0.0, -20.0, 0.0);
+                    arrow.setDeltaMovement(0.0, -winintlimit, 0.0);
                 });
             }
 
@@ -686,7 +686,7 @@ public class PalorderSMPMainJava {
                         double vz = dz * (r / 80.0) * 1.4;
 
                         Arrow arrow = new Arrow(world, player);
-                        arrow.setPos(targetPos.x, 30, targetPos.z);
+                        arrow.setPos(targetPos.x, 20, targetPos.z);
                         arrow.setDeltaMovement(vx, 0.0, vz);
                         arrow.setNoGravity(false);
                         arrow.setPierceLevel((byte)127);
