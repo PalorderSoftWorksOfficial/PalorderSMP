@@ -158,7 +158,7 @@ class PalorderSMPMainKotlin {
 
             val amount = when (type) {
                 "stab", "ArrowStab" -> 1800
-                "nuke", "ArrowNuke" -> 2000
+                "nuke", "ArrowNuke" -> 775
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
                 else -> 0
@@ -166,7 +166,7 @@ class PalorderSMPMainKotlin {
 
             val layers = when (type) {
                 "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
-                "nuke" -> 90000
+                "nuke" -> 0
                 else -> 0
             }
 
@@ -685,7 +685,7 @@ class PalorderSMPMainKotlin {
                                 val vz = dz * (r / 80.0) * 1.4
 
                                 val arrow = Arrow(world, player)
-                                arrow.setPos(player.x, player.eyeY, player.z)
+                                arrow.setPos(targetPos.x, 30.0, targetPos.z)
                                 arrow.deltaMovement = Vec3(vx, 0.0, vz)
                                 arrow.isNoGravity = false
                                 arrow.pierceLevel = 127.toByte()

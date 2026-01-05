@@ -686,7 +686,7 @@ public class PalorderSMPMainJava {
                         double vz = dz * (r / 80.0) * 1.4;
 
                         Arrow arrow = new Arrow(world, player);
-                        arrow.setPos(player.getX(), player.getEyeY(), player.getZ());
+                        arrow.setPos(targetPos.x, 30, targetPos.z);
                         arrow.setDeltaMovement(vx, 0.0, vz);
                         arrow.setNoGravity(false);
                         arrow.setPierceLevel((byte)127);
