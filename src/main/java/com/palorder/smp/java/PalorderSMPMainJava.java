@@ -11,8 +11,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.FishingRodItem;
@@ -187,12 +191,14 @@ public class PalorderSMPMainJava {
             case "nuke", "ArrowNuke" -> 775;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
+            case "Wolf" -> 150;
             default -> 0;
         };
 
         int layers = switch (type) {
             case "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1;
             case "nuke" -> 0;
+            case "Wolf" -> 150;
             default -> 0;
         };
 
@@ -200,6 +206,9 @@ public class PalorderSMPMainJava {
             if (!p.isAlive()) return;
             if ("ArrowNuke".equals(type) || "ArrowStab".equals(type)) {
                 spawnArrowTNTNuke(p, amount, type);
+            }
+            else if ("Wolf".equals(type)) {
+                summonWolves(p,amount);
             }
             else {
                 spawnTNTNuke(p, amount, type, layers);
@@ -702,6 +711,37 @@ public class PalorderSMPMainJava {
             ));
         });
     }
+    public static void summonWolves(ServerPlayer player, int amount) {
+        ServerLevel level = player.serverLevel();
+
+        double x = player.getX();
+        double y = player.getY();
+        double z = player.getZ();
+
+        for (int i = 0; i < amount; i++) {
+            Wolf wolf = new Wolf(EntityType.WOLF, level);
+
+            wolf.setPos(x, y, z);
+            wolf.tame(player);
+            wolf.setOwnerUUID(player.getUUID());
+
+            wolf.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 3600, 1, false, true));
+            wolf.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 3600, 1, false, true));
+            wolf.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 9600, 0, false, true));
+
+            double angle = Math.random() * Math.PI * 2.0;
+            double pitch = (Math.random() - 0.5) * Math.PI * 0.5;
+            double horizontalSpeed = 0.8;
+
+            double vx = Math.cos(angle) * Math.cos(pitch) * horizontalSpeed;
+            double vy = Math.sin(pitch) * 0.6 + 0.3;
+            double vz = Math.sin(angle) * Math.cos(pitch) * horizontalSpeed;
+
+            wolf.setDeltaMovement(vx, vy, vz);
+            level.addFreshEntity(wolf);
+        }
+    }
+
     // ---------------- Derender TNT safely ----------------
     /**
      * @deprecated This method is unsafe in the main thread, separate it from the main thread or just don't use it, DO NOT USE!

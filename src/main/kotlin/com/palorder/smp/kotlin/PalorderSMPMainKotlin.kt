@@ -15,8 +15,11 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.animal.Wolf
 import net.minecraft.world.entity.projectile.AbstractArrow
 import net.minecraft.world.entity.projectile.Arrow
 import net.minecraft.world.item.FishingRodItem
@@ -31,7 +34,6 @@ import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.ServerChatEvent
 import net.minecraftforge.event.TickEvent
 import net.minecraftforge.event.entity.player.PlayerInteractEvent
-import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem
 import net.minecraftforge.event.server.ServerStartingEvent
 import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
@@ -44,8 +46,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.sin
 
 @Mod("palordersmp_tweaked_kotlin_beta")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked_kotlin_beta", value = [Dist.DEDICATED_SERVER], bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -161,6 +165,7 @@ class PalorderSMPMainKotlin {
                 "nuke", "ArrowNuke" -> 775
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
+                "Wolf" -> 150
                 else -> 0
             }
 
@@ -174,7 +179,11 @@ class PalorderSMPMainKotlin {
                 if (!p.isAlive) return@runLater
                 if (type == "ArrowNuke" || type == "ArrowStab") {
                     spawnArrowTNTNuke(p, amount, type)
-                } else {
+                }
+                else if (type == "Wolf") {
+                    summonWolves(p,amount)
+                }
+                else {
                     spawnTNTNuke(p, amount, type, layers)
                 }
 
@@ -721,6 +730,37 @@ class PalorderSMPMainKotlin {
                 player.sendSystemMessage(
                     Component.literal("Arrow TNT Nuke launched! Type: $type, Count: $total")
                 )
+            }
+        }
+
+        fun summonWolves(player: ServerPlayer, amount: Int) {
+            val level = player.serverLevel()
+
+            val x = player.getX()
+            val y = player.getY()
+            val z = player.getZ()
+
+            for (i in 0..<amount) {
+                val wolf = Wolf(EntityType.WOLF, level)
+
+                wolf.setPos(x, y, z)
+                wolf.tame(player)
+                wolf.ownerUUID = player.getUUID()
+
+                wolf.addEffect(MobEffectInstance(MobEffects.DAMAGE_BOOST, 3600, 1, false, true))
+                wolf.addEffect(MobEffectInstance(MobEffects.MOVEMENT_SPEED, 3600, 1, false, true))
+                wolf.addEffect(MobEffectInstance(MobEffects.REGENERATION, 9600, 0, false, true))
+
+                val angle = Math.random() * Math.PI * 2.0
+                val pitch = (Math.random() - 0.5) * Math.PI * 0.5
+                val horizontalSpeed = 0.8
+
+                val vx = cos(angle) * cos(pitch) * horizontalSpeed
+                val vy = sin(pitch) * 0.6 + 0.3
+                val vz = sin(angle) * cos(pitch) * horizontalSpeed
+
+                wolf.setDeltaMovement(vx, vy, vz)
+                level.addFreshEntity(wolf)
             }
         }
         // ---------------- Derender TNT safely ----------------
