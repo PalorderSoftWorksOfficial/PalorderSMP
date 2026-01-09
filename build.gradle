@@ -18,7 +18,7 @@ configurations {
 }
 
 group = 'com.palorder.smp.java'
-version = '4.6'
+version = '4.7'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -99,6 +99,29 @@ repositories {
         name = 'PalorderHosting'
         url = 'https://maven.palorderhosting.net/'
     }
+    maven { // JEI
+        name = "Jared's Maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven { // JEI mirror, AE2
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+    }
+    maven {
+        url "https://cursemaven.com"
+    }
+    maven {
+        url 'https://maven.blamejared.com'
+    }
+    maven {
+        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
+    maven {
+        url = "https://maven.theillusivec4.top/"
+    }
+    maven {
+        url 'https://jitpack.io'
+    }
     maven { url = "https://maven.minecraftforge.net" }
     mavenCentral()
 }
@@ -139,9 +162,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "4.6",
+                "Specification-Version": "4.7",
                 "Implementation-Title": project.name,
-                "Implementation-Version": "4.6",
+                "Implementation-Version": "4.7",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])

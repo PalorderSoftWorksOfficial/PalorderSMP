@@ -19,6 +19,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -168,10 +169,10 @@ public class PalorderSMPMainJava {
         if (!(s.getItem() instanceof FishingRodItem)) return;
 
         CompoundTag t = s.getOrCreateTag();
-        String type = t.contains("RodType") ? t.getString("RodType") : null;
-        if (type == null) return;
+        if (!t.contains("RodType")) return;
+        String type = t.getString("RodType");
 
-        ServerPlayer p = (ServerPlayer) e.getEntity();
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
         ServerLevel world = p.serverLevel();
 
         int rodUse = t.getInt("RodUse") + 1;
@@ -185,6 +186,44 @@ public class PalorderSMPMainJava {
         }
 
         if (rodUse < 2) return;
+
+        if ("void".equals(type)) {
+            if (!t.contains("Voidrodowner")) {
+                t.putInt("RodUse", 0);
+                return;
+            }
+
+            if (!t.getString("Voidrodowner").equals(p.getUUID().toString())) {
+                t.putInt("RodUse", 0);
+                return;
+            }
+
+            FishingHook hook = p.fishing;
+            if (hook == null) {
+                t.putInt("RodUse", 0);
+                return;
+            }
+
+            if (!(hook.getHookedIn() != null && hook.getHookedIn() instanceof ServerPlayer target)) {
+                t.putInt("RodUse", 0);
+                return;
+            }
+
+            runLater(world, 20, () -> {
+                if (!target.isAlive()) return;
+                target.teleportTo(
+                        world,
+                        target.getX(),
+                        -64.0,
+                        target.getZ(),
+                        target.getYRot(),
+                        target.getXRot()
+                );
+            });
+
+            t.putInt("RodUse", 0);
+            return;
+        }
 
         int amount = switch (type) {
             case "stab", "ArrowStab" -> 1800;
@@ -206,14 +245,11 @@ public class PalorderSMPMainJava {
             if (!p.isAlive()) return;
             if ("ArrowNuke".equals(type) || "ArrowStab".equals(type)) {
                 spawnArrowTNTNuke(p, amount, type);
-            }
-            else if ("Wolf".equals(type)) {
-                summonWolves(p,amount);
-            }
-            else {
+            } else if ("Wolf".equals(type)) {
+                summonWolves(p, amount);
+            } else {
                 spawnTNTNuke(p, amount, type, layers);
             }
-
             t.putInt("RodUse", 0);
         });
     }
@@ -374,7 +410,7 @@ public class PalorderSMPMainJava {
                 .then(Commands.argument("target", StringArgumentType.word())
                         .then(Commands.argument("type", StringArgumentType.string())
                                 .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab"), builder))
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab","void","Wolf"), builder))
                                 .executes(context -> {
                                     ServerPlayer p = context.getSource().getPlayer();
                                     String type = StringArgumentType.getString(context, "type");
@@ -383,7 +419,12 @@ public class PalorderSMPMainJava {
                                     if (!(i.getItem() instanceof FishingRodItem)) return 0;
                                     i.getOrCreateTag().putString("RodType", type);
                                     i.setHoverName(Component.literal(type + " shot"));
-                                    i.setDamageValue(i.getMaxDamage());
+                                    if (!type.equals("void")) {
+                                        i.setDamageValue(i.getMaxDamage());
+                                    } else {
+                                        i.setHoverName(Component.literal("Stasis rod"));
+                                        i.getOrCreateTag().putString("Voidrodowner",p.getStringUUID());
+                                    }
                                     return 1;
                                 })
                         )));

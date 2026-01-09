@@ -142,10 +142,10 @@ class PalorderSMPMainKotlin {
             if (s.item !is FishingRodItem) return
 
             val t = s.orCreateTag
-            val type = if (t.contains("RodType")) t.getString("RodType") else null
-            if (type == null) return
+            if (!t.contains("RodType")) return
+            val type = t.getString("RodType")
 
-            val p = e.entity as ServerPlayer
+            val p = e.entity as? ServerPlayer ?: return
             val world = p.serverLevel()
 
             val rodUse = t.getInt("RodUse") + 1
@@ -160,6 +160,43 @@ class PalorderSMPMainKotlin {
 
             if (rodUse < 2) return
 
+            if (type == "void") {
+                if (!t.contains("Voidrodowner")) {
+                    t.putInt("RodUse", 0)
+                    return
+                }
+
+                if (t.getString("Voidrodowner") != p.uuid.toString()) {
+                    t.putInt("RodUse", 0)
+                    return
+                }
+
+                val hook = p.fishing ?: run {
+                    t.putInt("RodUse", 0)
+                    return
+                }
+
+                val target = hook.hookedIn as? ServerPlayer ?: run {
+                    t.putInt("RodUse", 0)
+                    return
+                }
+
+                runLater(world, 20) {
+                    if (!target.isAlive) return@runLater
+                    target.teleportTo(
+                        world,
+                        target.x,
+                        -64.0,
+                        target.z,
+                        target.yRot,
+                        target.xRot
+                    )
+                }
+
+                t.putInt("RodUse", 0)
+                return
+            }
+
             val amount = when (type) {
                 "stab", "ArrowStab" -> 1800
                 "nuke", "ArrowNuke" -> 775
@@ -172,21 +209,17 @@ class PalorderSMPMainKotlin {
             val layers = when (type) {
                 "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
                 "nuke" -> 0
+                "Wolf" -> 150
                 else -> 0
             }
 
             runLater(world, 10) {
                 if (!p.isAlive) return@runLater
-                if (type == "ArrowNuke" || type == "ArrowStab") {
-                    spawnArrowTNTNuke(p, amount, type)
+                when (type) {
+                    "ArrowNuke", "ArrowStab" -> spawnArrowTNTNuke(p, amount, type)
+                    "Wolf" -> summonWolves(p, amount)
+                    else -> spawnTNTNuke(p, amount, type, layers)
                 }
-                else if (type == "Wolf") {
-                    summonWolves(p,amount)
-                }
-                else {
-                    spawnTNTNuke(p, amount, type, layers)
-                }
-
                 t.putInt("RodUse", 0)
             }
         }
@@ -349,7 +382,7 @@ class PalorderSMPMainKotlin {
                                 Commands.argument<String?>("type", StringArgumentType.string())
                                     .suggests(SuggestionProvider { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
                                         SharedSuggestionProvider.suggest(
-                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab"),
+                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf"),
                                             builder
                                         )
                                     })
@@ -361,7 +394,12 @@ class PalorderSMPMainKotlin {
                                         if (i.getItem() !is FishingRodItem) return@executes 0
                                         i.getOrCreateTag().putString("RodType", type)
                                         i.setHoverName(Component.literal(type + " shot"))
-                                        i.damageValue = i.maxDamage
+                                        if (type != "void") {
+                                            i.setDamageValue(i.getMaxDamage())
+                                        } else {
+                                            i.setHoverName(Component.literal("Stasis rod"))
+                                            i.getOrCreateTag().putString("Voidrodowner", p.getStringUUID())
+                                        }
                                         1
                                     })
                             )
