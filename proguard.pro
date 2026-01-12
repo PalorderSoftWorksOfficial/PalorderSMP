@@ -22,6 +22,10 @@
 
 -keep class com.palorder.smp.kotlin.PrimedTntExtendedAPI { *; }
 
+-keep class org.spongepowered.asm.mixin.** { *; }
+
+-keep class com.palorder.smp.java.mixins.** { *; }
+
 -allowaccessmodification
 -useuniqueclassmembernames
 -overloadaggressively

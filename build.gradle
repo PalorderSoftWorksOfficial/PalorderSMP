@@ -12,13 +12,14 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'org.jetbrains.kotlin.kapt' version '2.0.0'
 }
 configurations {
     proguard
 }
 
 group = 'com.palorder.smp.java'
-version = '4.7'
+version = '4.8'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -139,8 +140,10 @@ dependencies {
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
     proguard "com.guardsquare:proguard-base:7.8.2"
-    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.1')
-    // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.1"
+    // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.8')
+    // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.8"
+    implementation fg.deobf("org.spongepowered:mixin:0.8.7")
+    kapt "org.spongepowered:mixin:0.8.7:processor"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -162,9 +165,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "4.7",
+                "Specification-Version": "4.8",
                 "Implementation-Title": project.name,
-                "Implementation-Version": "4.7",
+                "Implementation-Version": "4.8",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])

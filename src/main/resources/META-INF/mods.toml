@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP/issues
 
 [[mods]]
 modId="palordersmp_tweaked"
-version="4.7"
+version="4.8"
 displayName="PalorderSMP tweaked"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
 logoFile="LongLiveTheEmpire.png"
@@ -25,7 +25,7 @@ dependencies = [
 ]
 [[mods]]
 modId="palordersmp_tweaked_kotlin_beta"
-version="1.9-4.7"
+version="2.0-4.8"
 displayName="PalorderSMP tweaked kotlin beta"
 displayURL="https://github.com/PalorderSoftworksOfficial/PalorderSMP"
 logoFile="LongLiveTheEmpire.png"
@@ -41,3 +41,6 @@ dependencies = [
     { modId="kotlinforforge", mandatory=true, versionRange="[4.3.0,)", side="BOTH" },
     { modId="computercraft", mandatory=false, versionRange="[1.113.1)", side="BOTH"}
 ]
+
+[[mixins]]
+config="palordersmp.mixins.json"

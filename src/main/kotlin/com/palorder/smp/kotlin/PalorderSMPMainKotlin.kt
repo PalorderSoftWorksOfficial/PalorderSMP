@@ -203,7 +203,7 @@ class PalorderSMPMainKotlin {
             val amount = when (type) {
                 "stab", "ArrowStab" -> 1800
                 "nuke", "ArrowNuke" -> 775
-                "nuke_2" -> 1510
+                "nuke_2" -> 1000
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
                 "Wolf" -> 150
@@ -318,7 +318,7 @@ class PalorderSMPMainKotlin {
                                     .then(
                                         Commands.argument("type", StringArgumentType.string())
                                             .suggests { _, builder ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab","chunkdel","chunklaser"), builder)
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder)
                                             }
                                             .then(
                                                 Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
@@ -396,7 +396,7 @@ class PalorderSMPMainKotlin {
                                 Commands.argument<String?>("type", StringArgumentType.string())
                                     .suggests(SuggestionProvider { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
                                         SharedSuggestionProvider.suggest(
-                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf"),
+                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"),
                                             builder
                                         )
                                     })

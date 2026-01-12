@@ -229,7 +229,7 @@ public class PalorderSMPMainJava {
         int amount = switch (type) {
             case "stab", "ArrowStab" -> 1800;
             case "nuke", "ArrowNuke" -> 775;
-            case "nuke_2" -> 1510;
+            case "nuke_2" -> 1000;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
             case "Wolf" -> 150;
@@ -327,7 +327,7 @@ public class PalorderSMPMainJava {
                         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
                                 .then(Commands.argument("type", StringArgumentType.string())
                                         .suggests((ctx, builder) ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel"), builder))
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder))
                                         .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                                 .executes(context -> {
                                                     CommandSourceStack source = context.getSource();
@@ -415,7 +415,7 @@ public class PalorderSMPMainJava {
                 .then(Commands.argument("target", StringArgumentType.word())
                         .then(Commands.argument("type", StringArgumentType.string())
                                 .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab","void","Wolf"), builder))
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder))
                                 .executes(context -> {
                                     ServerPlayer p = context.getSource().getPlayer();
                                     String type = StringArgumentType.getString(context, "type");
