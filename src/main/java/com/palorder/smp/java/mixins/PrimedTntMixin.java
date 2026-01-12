@@ -54,13 +54,13 @@ public abstract class PrimedTntMixin {
         return downForce;
     }
 
-    @Inject(method = "tick()V", at = @At("HEAD"))
+    @Inject(method = "tick", at = @At("HEAD"))
     private void tickInject(CallbackInfo ci) {
         Vec3 motion = this.getDeltaMovement();
         this.setDeltaMovement(new Vec3(motion.x, motion.y - downForce, motion.z));
     }
 
-    @Inject(method = "explode()V", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "explode", at = @At("HEAD"), cancellable = true)
     private void explodeInject(CallbackInfo ci) {
         PrimedTnt self = (PrimedTnt) (Object) this;
         Level level = self.level();
@@ -84,3 +84,4 @@ public abstract class PrimedTntMixin {
         ci.cancel();
     }
 }
+
