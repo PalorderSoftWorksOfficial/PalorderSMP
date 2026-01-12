@@ -229,6 +229,7 @@ public class PalorderSMPMainJava {
         int amount = switch (type) {
             case "stab", "ArrowStab" -> 1800;
             case "nuke", "ArrowNuke" -> 775;
+            case "nuke_2" -> 1510;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
             case "Wolf" -> 150;
@@ -238,6 +239,7 @@ public class PalorderSMPMainJava {
         int layers = switch (type) {
             case "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1;
             case "nuke" -> 0;
+            case "nuke_2" -> 0;
             case "Wolf" -> 150;
             default -> 0;
         };
@@ -248,6 +250,8 @@ public class PalorderSMPMainJava {
                 spawnArrowTNTNuke(p, amount, type);
             } else if ("Wolf".equals(type)) {
                 summonWolves(p, amount);
+            } else if ("nuke_2".equals(type)) {
+                spawnTNTNuke(p, amount, "nuke", layers);
             } else {
                 spawnTNTNuke(p, amount, type, layers);
             }
