@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.palorder.smp.java.mixins",
+  "refmap": "mixins.palordersmp.refmap.json",
+  "mixins": [
+    "PrimedTntMixin"
+  ],
+  "client": [],
+  "server": [
+    "PrimedTntServerMixin"
+  ]
+}

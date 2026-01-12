@@ -17,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.projectile.FishingHook;
@@ -558,6 +559,7 @@ public class PalorderSMPMainJava {
                 int count = 0;
                 while (y >= minY && count < total) {
                     PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                    PrimedTnt tnt2 = new PrimedTnt(EntityType.TNT, world);
                     if (tnt != null) {
                         tnt.setPos(targetPos.x, y, targetPos.z);
                         tnt.setFuse(0);
