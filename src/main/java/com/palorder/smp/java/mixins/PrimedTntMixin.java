@@ -23,10 +23,10 @@ import java.util.Map;
 public abstract class PrimedTntMixin {
 
     @Shadow
-    public abstract Vec3 getDeltaMovement();
+    protected abstract Vec3 getDeltaMovement();
 
     @Shadow
-    public abstract void setDeltaMovement(Vec3 motion);
+    protected abstract void setDeltaMovement(Vec3 motion);
 
     private float damage = 4.0f;
     private double explosionRadius = 10.0;
@@ -54,19 +54,20 @@ public abstract class PrimedTntMixin {
         return downForce;
     }
 
-    @Inject(method = "tick", at = @At("HEAD"))
-    private void tickInject(CallbackInfo ci) {
+    @Inject(method = "tick()V", at = @At("HEAD"))
+    private void palorder$tickInject(CallbackInfo ci) {
         Vec3 motion = this.getDeltaMovement();
         this.setDeltaMovement(new Vec3(motion.x, motion.y - downForce, motion.z));
     }
 
-    @Inject(method = "explode", at = @At("HEAD"), cancellable = true)
-    private void explodeInject(CallbackInfo ci) {
+    @Inject(method = "explode()V", at = @At("HEAD"), cancellable = true)
+    private void palorder$explodeInject(CallbackInfo ci) {
         PrimedTnt self = (PrimedTnt) (Object) this;
         Level level = self.level();
 
         if (!level.isClientSide) {
             level.explode(self, self.getX(), self.getY(), self.getZ(), 4.0F, Level.ExplosionInteraction.TNT);
+
             Holder<DamageType> explosionType = level.registryAccess()
                     .registryOrThrow(Registries.DAMAGE_TYPE)
                     .getHolderOrThrow(DamageTypes.EXPLOSION);
@@ -84,5 +85,3 @@ public abstract class PrimedTntMixin {
         ci.cancel();
     }
 }
-
-
