@@ -18,7 +18,7 @@ configurations {
 }
 
 group = 'com.palorder.smp.java'
-version = '4.7'
+version = '4.8'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -162,9 +162,9 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "4.7",
+                "Specification-Version": "4.8",
                 "Implementation-Title": project.name,
-                "Implementation-Version": "4.7",
+                "Implementation-Version": "4.8",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])

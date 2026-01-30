@@ -46,10 +46,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.pow
-import kotlin.math.sin
+import kotlin.math.*
 
 @Mod("palordersmp_tweaked_kotlin_beta")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked_kotlin_beta", value = [Dist.DEDICATED_SERVER], bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -198,7 +195,8 @@ class PalorderSMPMainKotlin {
             }
 
             val amount = when (type) {
-                "stab", "ArrowStab" -> 1800
+                "stab" -> 1800
+                "ArrowStab" -> 1000
                 "nuke", "ArrowNuke" -> 775
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
@@ -689,86 +687,97 @@ class PalorderSMPMainKotlin {
                 player.sendSystemMessage(Component.literal("Orbital strike launched! Type: $type, Total: $total"))
             }
         }
-        fun spawnArrowTNTNuke(player: ServerPlayer, tnts: Int?, type: String) {
+        fun spawnArrowTNTNuke(player: ServerPlayer, tnts: Int?, type: String?) {
             val world = player.level() as ServerLevel
 
             val eyePos = player.getEyePosition(1.0f)
-            val lookVec = player.lookAngle
+            val lookVec = player.getLookAngle()
             val end = eyePos.add(lookVec.scale(100000.0))
 
-            val hit = world.clip(ClipContext(
-                eyePos, end,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                player
-            ))
+            val hit = world.clip(
+                ClipContext(
+                    eyePos, end,
+                    ClipContext.Block.COLLIDER,
+                    ClipContext.Fluid.NONE,
+                    player
+                )
+            )
 
-            val targetPos = hit?.location ?: end
-            val total = tnts?.takeIf { it > 0 } ?: 100
+            val targetPos = if (hit != null) hit.getLocation() else end
+            val total = if (tnts != null && tnts > 0) tnts else 100
 
-            world.server.execute {
-                when (type) {
-                    "ArrowNuke" -> {
-                        val baseRadii = intArrayOf(12,22,32,42,52,62,72,82,92,102)
-                        var spawned = 0
+            world.getServer().execute(Runnable {
+                if ("ArrowStab" == type) {
+                    val spawnY = targetPos.y + 20.0
 
-                        var ringIndex = 0
-                        while (spawned < total) {
-                            val r = if (ringIndex < baseRadii.size) baseRadii[ringIndex] else 98 + (ringIndex - baseRadii.size + 1) * 10
-                            val arrowsInRing = when {
-                                ringIndex == 0 -> 84
-                                ringIndex == 1 -> 50
-                                ringIndex in 2..5 -> 70
-                                ringIndex == 6 -> 90
-                                else -> minOf(100, (r*2 - ringIndex*1.2).toInt())
-                            }
+                    val arrow = Arrow(world, targetPos.x, spawnY, targetPos.z)
+                    arrow.setNoGravity(true)
+                    arrow.setDeltaMovement(Vec3.ZERO)
+                    arrow.setPierceLevel(127.toByte())
+                    arrow.setCritArrow(true)
+                    arrow.pickup = AbstractArrow.Pickup.DISALLOWED
+                    world.addFreshEntity(arrow)
 
-                            for (i in 0 until arrowsInRing) {
-                                if (spawned >= total) break
-                                val angle = Math.random() * 2.0 * Math.PI
-                                val dx = kotlin.math.cos(angle)
-                                val dz = kotlin.math.sin(angle)
-                                val vx = dx * (r / 80.0) * 1.4
-                                val vz = dz * (r / 80.0) * 1.4
-
-                                val arrow = Arrow(world, player)
-                                arrow.setPos(targetPos.x, 20.0, targetPos.z)
-                                arrow.deltaMovement = Vec3(vx, 0.0, vz)
-                                arrow.isNoGravity = false
-                                arrow.pierceLevel = 127.toByte()
-                                arrow.isCritArrow = true
-                                arrow.pickup = AbstractArrow.Pickup.DISALLOWED
-                                world.addFreshEntity(arrow)
-                                spawned++
-                            }
-
-                            ringIndex++
-                        }
+                    for (i in 0..<total) {
+                        val tnt = com.palorder.smp.java.PrimedTntExtendedAPI(EntityType.TNT, world)
+                        tnt.setPos(targetPos.x, spawnY + 1.0, targetPos.z)
+                        tnt.setFuse(0)
+                        tnt.setNoGravity(true)
+                        tnt.setDeltaMovement(0.0, 0.0, 0.0)
+                        tnt.setDamage(100000f) // optional insane damage
+                        tnt.setExplosionRadius(16.0) // optional large blast
+                        world.addFreshEntity(tnt)
+                        PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                            .add(tnt)
                     }
+                } else if ("ArrowNuke" == type) {
+                    val baseRadii = intArrayOf(12, 22, 32, 42, 52, 62, 72, 82, 92, 102)
+                    var spawned = 0
 
-                    "ArrowStab" -> {
-                        val freezeY = 50.0
+                    val center = com.palorder.smp.java.PrimedTntExtendedAPI(EntityType.TNT, world)
+                    center.setPos(targetPos.x, targetPos.y + 20, targetPos.z)
+                    center.setFuse(0)
+                    world.addFreshEntity(center)
+                    PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                        .add(center)
+                    spawned++
 
-                        val arrow = Arrow(world, targetPos.x, freezeY, targetPos.z)
-                        arrow.isNoGravity = true
-                        arrow.deltaMovement = Vec3.ZERO
-                        arrow.pierceLevel = 127.toByte()
-                        arrow.isCritArrow = true
-                        arrow.pickup = AbstractArrow.Pickup.DISALLOWED
-                        world.addFreshEntity(arrow)
+                    var ringIndex = 0
+                    while (spawned < total) {
+                        val r =
+                            if (ringIndex < baseRadii.size) baseRadii[ringIndex] else 98 + (ringIndex - baseRadii.size + 1) * 10
+                        val tntsInRing = min(100, total - spawned)
 
-                        world.server.execute {
-                            arrow.isNoGravity = false
-                            arrow.deltaMovement = Vec3(0.0, (-Integer.MAX_VALUE).toDouble(), 0.0)
+                        var i = 0
+                        while (i < tntsInRing && spawned < total) {
+                            val angle = Math.random() * 2.0 * Math.PI
+                            val dx = cos(angle)
+                            val dz = sin(angle)
+
+                            val vx = dx * (r / 80.0) * 1.4
+                            val vz = dz * (r / 80.0) * 1.4
+
+                            val tnt = com.palorder.smp.java.PrimedTntExtendedAPI(EntityType.TNT, world)
+                            tnt.setPos(targetPos.x, targetPos.y + 20, targetPos.z)
+                            tnt.setFuse(0) // instant explosion
+                            tnt.setDeltaMovement(vx, 0.0, vz) // optional spread velocity
+                            tnt.setDamage(100000f)
+                            tnt.setExplosionRadius(16.0)
+                            world.addFreshEntity(tnt)
+                            PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                                .add(tnt)
+                            i++
+                            spawned++
                         }
+                        ringIndex++
                     }
                 }
-
-
                 player.sendSystemMessage(
-                    Component.literal("Arrow TNT Nuke launched! Type: $type, Count: $total")
+                    Component.literal(
+                        "Arrow TNT Nuke launched! Type: " + type + ", Count: " + total
+                    )
                 )
-            }
+            })
         }
 
         fun summonWolves(player: ServerPlayer, amount: Int) {

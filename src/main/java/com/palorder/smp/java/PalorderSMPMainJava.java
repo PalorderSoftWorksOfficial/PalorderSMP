@@ -226,7 +226,8 @@ public class PalorderSMPMainJava {
         }
 
         int amount = switch (type) {
-            case "stab", "ArrowStab" -> 1800;
+            case "stab" -> 1800;
+            case "ArrowStab" -> 1000;
             case "nuke", "ArrowNuke" -> 775;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
@@ -698,9 +699,10 @@ public class PalorderSMPMainJava {
 
             if ("ArrowStab".equals(type)) {
 
-                double freezeY = 20.0;
+                double spawnY = targetPos.y + 20.0;
 
-                Arrow arrow = new Arrow(world, targetPos.x, freezeY, targetPos.z);
+                // Spawn a single arrow entity (just for visuals, if needed)
+                Arrow arrow = new Arrow(world, targetPos.x, spawnY, targetPos.z);
                 arrow.setNoGravity(true);
                 arrow.setDeltaMovement(Vec3.ZERO);
                 arrow.setPierceLevel((byte)127);
@@ -708,41 +710,51 @@ public class PalorderSMPMainJava {
                 arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
                 world.addFreshEntity(arrow);
 
-                world.getServer().execute(() -> {
-                    arrow.setNoGravity(false);
-                    arrow.setDeltaMovement(0.0, -winintlimit, 0.0);
-                });
-            }
+                // Spawn a LOT of zero-fuse TNT just above the arrow
+                for (int i = 0; i < total; i++) {
+                    PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                    tnt.setPos(targetPos.x, spawnY + 1.0, targetPos.z);
+                    tnt.setFuse(0); // instant explosion
+                    tnt.setNoGravity(true);
+                    tnt.setDeltaMovement(0.0, 0.0, 0.0);
+                    tnt.setDamage(100000); // optional insane damage
+                    tnt.setExplosionRadius(16); // optional large blast
+                    world.addFreshEntity(tnt);
+                    nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+                }
 
-            else if ("ArrowNuke".equals(type)) {
+            } else if ("ArrowNuke".equals(type)) {
 
                 int[] baseRadii = new int[]{12,22,32,42,52,62,72,82,92,102};
                 int spawned = 0;
 
+                PrimedTntExtendedAPI center = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                center.setPos(targetPos.x, targetPos.y + 20, targetPos.z);
+                center.setFuse(0);
+                world.addFreshEntity(center);
+                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(center);
+                spawned++;
+
                 for (int ringIndex = 0; spawned < total; ringIndex++) {
                     int r = ringIndex < baseRadii.length ? baseRadii[ringIndex] : 98 + (ringIndex - baseRadii.length + 1) * 10;
-                    int arrowsInRing;
-                    if (ringIndex == 0) arrowsInRing = 84;
-                    else if (ringIndex == 1) arrowsInRing = 50;
-                    else if (ringIndex >= 2 && ringIndex <= 5) arrowsInRing = 70;
-                    else if (ringIndex == 6) arrowsInRing = 90;
-                    else arrowsInRing = Math.min(100, (int)(r*2 - ringIndex*1.2));
+                    int tntsInRing = Math.min(100, total - spawned);
 
-                    for (int i = 0; i < arrowsInRing && spawned < total; i++, spawned++) {
+                    for (int i = 0; i < tntsInRing && spawned < total; i++, spawned++) {
                         double angle = Math.random() * 2.0 * Math.PI;
                         double dx = Math.cos(angle);
                         double dz = Math.sin(angle);
+
                         double vx = dx * (r / 80.0) * 1.4;
                         double vz = dz * (r / 80.0) * 1.4;
 
-                        Arrow arrow = new Arrow(world, player);
-                        arrow.setPos(targetPos.x, 20, targetPos.z);
-                        arrow.setDeltaMovement(vx, 0.0, vz);
-                        arrow.setNoGravity(false);
-                        arrow.setPierceLevel((byte)127);
-                        arrow.setCritArrow(true);
-                        arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
-                        world.addFreshEntity(arrow);
+                        PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                        tnt.setPos(targetPos.x, targetPos.y + 20, targetPos.z);
+                        tnt.setFuse(0);
+                        tnt.setDeltaMovement(vx, 0.0, vz);
+                        tnt.setDamage(100000);
+                        tnt.setExplosionRadius(16);
+                        world.addFreshEntity(tnt);
+                        nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                     }
                 }
             }
