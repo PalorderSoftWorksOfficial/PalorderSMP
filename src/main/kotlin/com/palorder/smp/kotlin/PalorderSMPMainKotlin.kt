@@ -724,8 +724,7 @@ class PalorderSMPMainKotlin {
                         tnt.setFuse(0)
                         tnt.setNoGravity(true)
                         tnt.setDeltaMovement(0.0, 0.0, 0.0)
-                        tnt.setDamage(100000f) // optional insane damage
-                        tnt.setExplosionRadius(16.0) // optional large blast
+                        tnt.setDamage(-1000f)
                         world.addFreshEntity(tnt)
                         PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
                             .add(tnt)

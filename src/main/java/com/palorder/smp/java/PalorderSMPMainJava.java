@@ -701,7 +701,6 @@ public class PalorderSMPMainJava {
 
                 double spawnY = targetPos.y + 20.0;
 
-                // Spawn a single arrow entity (just for visuals, if needed)
                 Arrow arrow = new Arrow(world, targetPos.x, spawnY, targetPos.z);
                 arrow.setNoGravity(true);
                 arrow.setDeltaMovement(Vec3.ZERO);
@@ -710,15 +709,14 @@ public class PalorderSMPMainJava {
                 arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
                 world.addFreshEntity(arrow);
 
-                // Spawn a LOT of zero-fuse TNT just above the arrow
                 for (int i = 0; i < total; i++) {
                     PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
                     tnt.setPos(targetPos.x, spawnY + 1.0, targetPos.z);
-                    tnt.setFuse(0); // instant explosion
+                    tnt.setFuse(0);
                     tnt.setNoGravity(true);
                     tnt.setDeltaMovement(0.0, 0.0, 0.0);
-                    tnt.setDamage(100000); // optional insane damage
-                    tnt.setExplosionRadius(16); // optional large blast
+                    tnt.setDamage(-1000);
+                    tnt.setExplosionRadius(16);
                     world.addFreshEntity(tnt);
                     nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
                 }
