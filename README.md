@@ -40,3 +40,7 @@ If you encounter problems or bugs, report them here: [PalorderSMP Issues Page](h
 - Read the [License](License.md) for terms and usage.  
 - You can DM me on Discord for non-copylocked versions or commercial inquiries: **@PalorderCorporation**  
 - Repository: [PalorderSMP on GitHub](https://github.com/PalorderSoftWorksOfficial/PalorderSMP)
+
+## Statuses
+
+### Build and release: [![Build and Release Minecraft Mod](https://github.com/PalorderSoftWorksOfficial/PalorderSMP/actions/workflows/release.yml/badge.svg)](https://github.com/PalorderSoftWorksOfficial/PalorderSMP/actions/workflows/release.yml)

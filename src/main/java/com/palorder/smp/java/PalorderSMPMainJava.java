@@ -17,6 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.entity.projectile.FishingHook;
@@ -229,6 +230,7 @@ public class PalorderSMPMainJava {
             case "stab" -> 1800;
             case "ArrowStab" -> 1000;
             case "nuke", "ArrowNuke" -> 775;
+            case "nuke_2" -> 1000;
             case "chunklaser" -> 256;
             case "chunkdel" -> 49152;
             case "Wolf" -> 150;
@@ -238,6 +240,7 @@ public class PalorderSMPMainJava {
         int layers = switch (type) {
             case "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1;
             case "nuke" -> 0;
+            case "nuke_2" -> 0;
             case "Wolf" -> 150;
             default -> 0;
         };
@@ -248,6 +251,8 @@ public class PalorderSMPMainJava {
                 spawnArrowTNTNuke(p, amount, type);
             } else if ("Wolf".equals(type)) {
                 summonWolves(p, amount);
+            } else if ("nuke_2".equals(type)) {
+                spawnTNTNuke(p, amount, "nuke", layers);
             } else {
                 spawnTNTNuke(p, amount, type, layers);
             }
@@ -323,7 +328,7 @@ public class PalorderSMPMainJava {
                         .then(Commands.argument("amount", IntegerArgumentType.integer(0))
                                 .then(Commands.argument("type", StringArgumentType.string())
                                         .suggests((ctx, builder) ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel"), builder))
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder))
                                         .then(Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
                                                 .executes(context -> {
                                                     CommandSourceStack source = context.getSource();
@@ -411,7 +416,7 @@ public class PalorderSMPMainJava {
                 .then(Commands.argument("target", StringArgumentType.word())
                         .then(Commands.argument("type", StringArgumentType.string())
                                 .suggests((ctx, builder) ->
-                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab","void","Wolf"), builder))
+                                        net.minecraft.commands.SharedSuggestionProvider.suggest(List.of("nuke", "stab","chunklaser","chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder))
                                 .executes(context -> {
                                     ServerPlayer p = context.getSource().getPlayer();
                                     String type = StringArgumentType.getString(context, "type");
@@ -559,6 +564,7 @@ public class PalorderSMPMainJava {
                 int count = 0;
                 while (y >= minY && count < total) {
                     PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+                    PrimedTnt tnt2 = new PrimedTnt(EntityType.TNT, world);
                     if (tnt != null) {
                         tnt.setPos(targetPos.x, y, targetPos.z);
                         tnt.setFuse(0);

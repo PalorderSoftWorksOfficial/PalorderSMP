@@ -41,3 +41,6 @@ dependencies = [
     { modId="kotlinforforge", mandatory=true, versionRange="[4.3.0,)", side="BOTH" },
     { modId="computercraft", mandatory=false, versionRange="[1.113.1)", side="BOTH"}
 ]
+
+[[mixins]]
+config="palordersmp.mixins.json"

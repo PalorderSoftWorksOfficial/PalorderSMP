@@ -132,6 +132,7 @@ class PalorderSMPMainKotlin {
         }
 
         @SubscribeEvent
+        @JvmStatic
         fun onUse(e: PlayerInteractEvent.RightClickItem) {
             if (e.level.isClientSide) return
 
@@ -150,7 +151,9 @@ class PalorderSMPMainKotlin {
 
             if (rodUse == 1) {
                 runLater(world, 130) {
-                    if (s.hasTag()) s.tag!!.putInt("RodUse", 0)
+                    if (s.hasTag()) {
+                        s.tag?.putInt("RodUse", 0)
+                    }
                 }
                 return
             }
@@ -198,6 +201,7 @@ class PalorderSMPMainKotlin {
                 "stab" -> 1800
                 "ArrowStab" -> 1000
                 "nuke", "ArrowNuke" -> 775
+                "nuke_2" -> 1000
                 "chunklaser" -> 256
                 "chunkdel" -> 49152
                 "Wolf" -> 150
@@ -206,18 +210,28 @@ class PalorderSMPMainKotlin {
 
             val layers = when (type) {
                 "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
-                "nuke" -> 0
+                "nuke", "nuke_2" -> 0
                 "Wolf" -> 150
                 else -> 0
             }
 
             runLater(world, 10) {
                 if (!p.isAlive) return@runLater
+
                 when (type) {
-                    "ArrowNuke", "ArrowStab" -> spawnArrowTNTNuke(p, amount, type)
-                    "Wolf" -> summonWolves(p, amount)
-                    else -> spawnTNTNuke(p, amount, type, layers)
+                    "ArrowNuke", "ArrowStab" ->
+                        spawnArrowTNTNuke(p, amount, type)
+
+                    "Wolf" ->
+                        summonWolves(p, amount)
+
+                    "nuke_2" ->
+                        spawnTNTNuke(p, amount, "nuke", layers)
+
+                    else ->
+                        spawnTNTNuke(p, amount, type, layers)
                 }
+
                 t.putInt("RodUse", 0)
             }
         }
@@ -302,7 +316,7 @@ class PalorderSMPMainKotlin {
                                     .then(
                                         Commands.argument("type", StringArgumentType.string())
                                             .suggests { _, builder ->
-                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab","chunkdel","chunklaser"), builder)
+                                                net.minecraft.commands.SharedSuggestionProvider.suggest(listOf("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"), builder)
                                             }
                                             .then(
                                                 Commands.argument("layers", IntegerArgumentType.integer(1, 5000))
@@ -380,7 +394,7 @@ class PalorderSMPMainKotlin {
                                 Commands.argument<String?>("type", StringArgumentType.string())
                                     .suggests(SuggestionProvider { ctx: CommandContext<CommandSourceStack?>?, builder: SuggestionsBuilder? ->
                                         SharedSuggestionProvider.suggest(
-                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf"),
+                                            mutableListOf<String?>("nuke", "stab", "chunklaser", "chunkdel","ArrowNuke","ArrowStab","void","Wolf","nuke_2"),
                                             builder
                                         )
                                     })
