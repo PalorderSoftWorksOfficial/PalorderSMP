@@ -40,7 +40,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
 import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
+import org.slf4j.Logger
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -74,7 +74,7 @@ class PalorderSMPMainKotlin {
             scheduled.computeIfAbsent(targetTick) { ArrayList() }.add(r)
         }
 
-        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class)
+        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class) as Logger
 
         // ---------------- Server / Scheduler ----------------
         val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")
@@ -90,7 +90,7 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Chat rewards ----------------
         private val chatItemRewards: MutableMap<String, ItemStack> = HashMap()
-        private val log: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java)
+        private val log: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java) as Logger
 
         init {
             chatItemRewards["gimme natherite blocks ples"] = ItemStack(Items.NETHERITE_BLOCK, 64)

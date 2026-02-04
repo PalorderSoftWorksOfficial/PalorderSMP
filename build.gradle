@@ -140,6 +140,10 @@ dependencies {
     implementation fg.deobf("cc.tweaked:cc-tweaked-1.20.1-forge:1.113.1")
     implementation 'thedarkcolour:kotlinforforge:4.11.0'
     proguard "com.guardsquare:proguard-base:7.8.2"
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.5.3"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.5.3")) {
+        jarJar.ranged(it, "[0.5.3,)")
+    }
     // implementation fg.deobf('com.palorder.smp.java:palordersmp-tweaked:4.8')
     // implementation "com.palorder.smp.java:palordersmp-tweaked-mapped:4.8"
     implementation fg.deobf("org.spongepowered:mixin:0.8.7")

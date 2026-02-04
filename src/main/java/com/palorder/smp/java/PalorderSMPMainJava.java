@@ -41,6 +41,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.ModList;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -71,7 +72,7 @@ import java.util.concurrent.TimeUnit;
 // :contentReference[oaicite:6]{index=6}
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 import javax.swing.*;
 
@@ -86,7 +87,7 @@ public class PalorderSMPMainJava {
     }
 
 
-    public static final Logger logger = LogManager.getLogger(PalorderSMPMainJava.class);
+    public static final Logger logger = (Logger) LogManager.getLogger(PalorderSMPMainJava.class);
     // ---------------- Server / Scheduler ----------------
     public static final UUID OWNER_UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c");
     public static final UUID OWNER_UUID2 = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686");
@@ -101,7 +102,7 @@ public class PalorderSMPMainJava {
     public static Random rand = new Random();
     // ---------------- Chat rewards ----------------
     private static final Map<String, ItemStack> chatItemRewards = new HashMap<>();
-    private static final Logger log = LogManager.getLogger(PalorderSMPMainJava.class);
+    private static final Logger log = (Logger) LogManager.getLogger(PalorderSMPMainJava.class);
     private static final Integer winintlimit = Integer.MAX_VALUE;
     static {
         chatItemRewards.put("gimme natherite blocks ples", new ItemStack(Items.NETHERITE_BLOCK, 64));
