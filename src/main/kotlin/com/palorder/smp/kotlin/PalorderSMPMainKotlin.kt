@@ -39,14 +39,14 @@ import net.minecraftforge.event.server.ServerStoppingEvent
 import net.minecraftforge.eventbus.api.SubscribeEvent
 import net.minecraftforge.fml.ModList
 import net.minecraftforge.fml.common.Mod
-import org.apache.logging.log4j.LogManager
-import org.slf4j.Logger
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 import kotlin.math.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 @Mod("palordersmp_tweaked_kotlin_beta")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked_kotlin_beta", value = [Dist.DEDICATED_SERVER], bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -74,8 +74,8 @@ class PalorderSMPMainKotlin {
             scheduled.computeIfAbsent(targetTick) { ArrayList() }.add(r)
         }
 
-        val logger: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class) as Logger
-
+        val logger: Logger = LoggerFactory.getLogger(com.palorder.smp.kotlin.PalorderSMPMainKotlin::class.java)
+        val log: Logger? = LoggerFactory.getLogger(com.palorder.smp.kotlin.PalorderSMPMainKotlin::class.java)
         // ---------------- Server / Scheduler ----------------
         val OWNER_UUID: UUID = UUID.fromString("78d8e34d-5d1a-4b2d-85e2-f0792d9e1a6c")
         val OWNER_UUID2: UUID = UUID.fromString("33909bea-79f1-3cf6-a597-068954e51686")
@@ -90,7 +90,6 @@ class PalorderSMPMainKotlin {
 
         // ---------------- Chat rewards ----------------
         private val chatItemRewards: MutableMap<String, ItemStack> = HashMap()
-        private val log: Logger = LogManager.getLogger(PalorderSMPMainKotlin::class.java) as Logger
 
         init {
             chatItemRewards["gimme natherite blocks ples"] = ItemStack(Items.NETHERITE_BLOCK, 64)
