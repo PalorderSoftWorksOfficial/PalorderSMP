@@ -592,9 +592,13 @@ public class PalorderSMPMainJava {
 
                 int placed = 0;
                 double spacing = Math.max(1.0, Math.cbrt((16 * 16 * (maxY - minY)) / (double) total));
+                int step = (int) Math.floor(spacing);
+                if (step < 1) {
+                    step = 1;
+                }
 
-                for (int y = minY; y < maxY; y = (int) (y + spacing)) {
-                    for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx += spacing) {
+                for (int y = minY; y < maxY; y += spacing) {
+                    for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx = (int) (cx + spacing)) {
                         for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
                             BlockState state = world.getBlockState(new BlockPos(cx, y, cz));
                             if (!state.isAir()) {
