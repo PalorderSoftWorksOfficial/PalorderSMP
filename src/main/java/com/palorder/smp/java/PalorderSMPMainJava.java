@@ -597,9 +597,9 @@ public class PalorderSMPMainJava {
                     step = 1;
                 }
 
-                for (int y = minY; y < maxY; y += step) {
-                    for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx += step) {
-                        for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += step) {
+                for (int y = minY; y < maxY; y += spacing) {
+                    for (int cx = (chunkX << 4); cx < (chunkX << 4) + 16; cx = (int) (cx + spacing)) {
+                        for (int cz = (chunkZ << 4); cz < (chunkZ << 4) + 16; cz += spacing) {
                             BlockState state = world.getBlockState(new BlockPos(cx, y, cz));
                             if (!state.isAir()) {
                                 PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
