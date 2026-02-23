@@ -192,7 +192,8 @@ tasks.register("checkSafeAnnotations") {
         }
     }
 }
-
+publish.dependsOn(checkSafeAnnotations)
+compileKotlin.dependsOn(checkSafeAnnotations)
 compileJava.dependsOn(checkSafeAnnotations)
 // ======================================================
 // Publishing

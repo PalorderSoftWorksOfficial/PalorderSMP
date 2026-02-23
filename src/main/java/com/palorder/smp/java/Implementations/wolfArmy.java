@@ -5,7 +5,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class wolfArmy {
     public static void summonWolves(ServerPlayer player, int amount) {
@@ -21,7 +24,9 @@ public class wolfArmy {
             wolf.setPos(x, y, z);
             wolf.tame(player);
             wolf.setOwnerUUID(player.getUUID());
-
+            ItemStack wolfArmor = new ItemStack(Items.NETHERITE_CHESTPLATE);
+            wolf.canHoldItem(wolfArmor);
+            wolf.equipItemIfPossible(wolfArmor);
             wolf.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 3600, 1, false, true));
             wolf.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 3600, 1, false, true));
             wolf.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 9600, 0, false, true));
