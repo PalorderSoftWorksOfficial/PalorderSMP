@@ -18,7 +18,7 @@ configurations {
 }
 
 group = 'com.palorder.smp.java'
-version = '4.9'
+version = '5.0'
 archivesBaseName = 'palordersmp-tweaked'
 
 java {
@@ -167,15 +167,33 @@ jar {
         attributes([
                 "Specification-Title": "PalorderSMP-Tweaked",
                 "Specification-Vendor": "PalorderSoftWorks",
-                "Specification-Version": "4.9",
+                "Specification-Version": "5.0",
                 "Implementation-Title": project.name,
-                "Implementation-Version": "4.9",
+                "Implementation-Version": "5.0",
                 "Implementation-Vendor": "PalorderSoftWorks",
                 "Automatic-Module-Name": project.name.toLowerCase()
         ])
     }
 }
+// Policies
+tasks.register("checkSafeAnnotations") {
+    doLast {
+        def unsafeFiles = fileTree("src/main/java").matching {
+            include "**/*.java"
+        }.findAll { file ->
+            file.text.contains("@Safe(toggle = false)")
+        }
 
+        if (!unsafeFiles.isEmpty()) {
+            throw new GradleException(
+                    "Build blocked: Found @Safe(toggle = false) in:\n" +
+                            unsafeFiles.join("\n")
+            )
+        }
+    }
+}
+
+compileJava.dependsOn(checkSafeAnnotations)
 // ======================================================
 // Publishing
 // ======================================================

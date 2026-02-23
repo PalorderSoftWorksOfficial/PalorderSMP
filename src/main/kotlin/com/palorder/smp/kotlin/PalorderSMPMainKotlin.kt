@@ -7,7 +7,10 @@ import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.suggestion.SuggestionProvider
 import com.mojang.brigadier.suggestion.SuggestionsBuilder
+import com.palorder.smp.java.Implementations.spawnTNTNuke
 import com.palorder.smp.java.PalorderSMPMainJava
+import com.palorder.smp.java.authDB.UUIDs
+import com.palorder.smp.java.scheduler.Scheduler
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.SharedSuggestionProvider
@@ -98,142 +101,6 @@ class PalorderSMPMainKotlin {
             chatItemRewards["i need food ples give me food ples"] = ItemStack(Items.GOLDEN_CARROT, 64)
         }
 
-        @JvmStatic
-        @SubscribeEvent
-        fun handleChatItemRequests(event: ServerChatEvent) {
-            val message = event.message.string
-            val player = event.player
-            val reward = chatItemRewards[message]
-            if (reward != null) {
-                player.inventory.add(reward)
-            }
-        }
-
-        @JvmStatic
-        @SubscribeEvent
-        fun onServerStarting(event: ServerStartingEvent) {
-            registerCommands(event.server.commands.dispatcher)
-        }
-
-        @JvmStatic
-        @SubscribeEvent
-        fun onServerStopping(event: ServerStoppingEvent) {
-            scheduler.shutdown()
-        }
-        @JvmStatic
-        @SubscribeEvent
-        fun onServerTick(e: TickEvent.ServerTickEvent) {
-            if (e.phase != TickEvent.Phase.END) return
-            val world = e.server.overworld()
-            val time = world.gameTime.toInt()
-            val list = scheduled.remove(time)
-            list?.forEach { it.invoke() }
-        }
-
-        @SubscribeEvent
-        @JvmStatic
-        fun onUse(e: PlayerInteractEvent.RightClickItem) {
-            if (e.level.isClientSide) return
-
-            val s = e.itemStack
-            if (s.item !is FishingRodItem) return
-
-            val t = s.orCreateTag
-            if (!t.contains("RodType")) return
-            val type = t.getString("RodType")
-
-            val p = e.entity as? ServerPlayer ?: return
-            val world = p.serverLevel()
-
-            val rodUse = t.getInt("RodUse") + 1
-            t.putInt("RodUse", rodUse)
-
-            if (rodUse == 1) {
-                runLater(world, 130) {
-                    if (s.hasTag()) {
-                        s.tag?.putInt("RodUse", 0)
-                    }
-                }
-                return
-            }
-
-            if (rodUse < 2) return
-
-            if (type == "void") {
-                if (!t.contains("Voidrodowner")) {
-                    t.putInt("RodUse", 0)
-                    return
-                }
-
-                if (t.getString("Voidrodowner") != p.uuid.toString()) {
-                    t.putInt("RodUse", 0)
-                    return
-                }
-
-                val hook = p.fishing ?: run {
-                    t.putInt("RodUse", 0)
-                    return
-                }
-
-                val target = hook.hookedIn as? ServerPlayer ?: run {
-                    t.putInt("RodUse", 0)
-                    return
-                }
-
-                runLater(world, 20) {
-                    if (!target.isAlive) return@runLater
-                    target.teleportTo(
-                        world,
-                        target.x,
-                        -64.0,
-                        target.z,
-                        target.yRot,
-                        target.xRot
-                    )
-                }
-
-                t.putInt("RodUse", 0)
-                return
-            }
-
-            val amount = when (type) {
-                "stab" -> 1800
-                "ArrowStab" -> 1000
-                "nuke", "ArrowNuke" -> 775
-                "nuke_2" -> 1000
-                "chunklaser" -> 256
-                "chunkdel" -> 49152
-                "Wolf" -> 150
-                else -> 0
-            }
-
-            val layers = when (type) {
-                "stab", "chunklaser", "chunkdel", "ArrowStab" -> 1
-                "nuke", "nuke_2" -> 0
-                "Wolf" -> 150
-                else -> 0
-            }
-
-            runLater(world, 10) {
-                if (!p.isAlive) return@runLater
-
-                when (type) {
-                    "ArrowNuke", "ArrowStab" ->
-                        spawnArrowTNTNuke(p, amount, type)
-
-                    "Wolf" ->
-                        summonWolves(p, amount)
-
-                    "nuke_2" ->
-                        spawnTNTNuke(p, amount, "nuke", layers)
-
-                    else ->
-                        spawnTNTNuke(p, amount, type, layers)
-                }
-
-                t.putInt("RodUse", 0)
-            }
-        }
         // ---------------- Commands ----------------
         @JvmStatic
         fun registerCommands(dispatcher: CommandDispatcher<CommandSourceStack>) {
@@ -378,8 +245,8 @@ class PalorderSMPMainKotlin {
                         try {
                             val player = source!!.getPlayer()
                             if (player != null) {
-                                return@requires player.getGameProfile().getId() == PalorderSMPMainJava.OWNER_UUID
-                                        || player.getGameProfile().getId() == PalorderSMPMainJava.OWNER_UUID2
+                                return@requires player.getGameProfile().getId() == UUIDs.OWNER_UUID
+                                        || player.getGameProfile().getId() == UUIDs.OWNER_UUID2
                                         || "dev".equals(player.getName().getString(), ignoreCase = true)
                             }
                             return@requires true
@@ -739,7 +606,7 @@ class PalorderSMPMainKotlin {
                         tnt.setDeltaMovement(0.0, 0.0, 0.0)
                         tnt.setDamage(-1000f)
                         world.addFreshEntity(tnt)
-                        PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                        spawnTNTNuke.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
                             .add(tnt)
                     }
                 } else if ("ArrowNuke" == type) {
@@ -750,7 +617,7 @@ class PalorderSMPMainKotlin {
                     center.setPos(targetPos.x, targetPos.y + 20, targetPos.z)
                     center.setFuse(0)
                     world.addFreshEntity(center)
-                    PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                    spawnTNTNuke.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
                         .add(center)
                     spawned++
 
@@ -776,7 +643,7 @@ class PalorderSMPMainKotlin {
                             tnt.setDamage(100000f)
                             tnt.setExplosionRadius(16.0)
                             world.addFreshEntity(tnt)
-                            PalorderSMPMainJava.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
+                            spawnTNTNuke.nukeSpawnedEntities.computeIfAbsent(world) { k: ServerLevel? -> HashSet<Entity?>() }
                                 .add(tnt)
                             i++
                             spawned++
@@ -786,7 +653,7 @@ class PalorderSMPMainKotlin {
                 }
                 player.sendSystemMessage(
                     Component.literal(
-                        "Arrow TNT Nuke launched! Type: " + type + ", Count: " + total
+                        "Arrow TNT Nuke launched! Type: $type, Count: $total"
                     )
                 )
             })
@@ -821,42 +688,6 @@ class PalorderSMPMainKotlin {
                 wolf.setDeltaMovement(vx, vy, vz)
                 level.addFreshEntity(wolf)
             }
-        }
-        // ---------------- Derender TNT safely ----------------
-        @Deprecated(
-            message = "This method is unsafe in the main thread, separate it from the main thread or just don't use it, DO NOT USE!",
-            level = DeprecationLevel.ERROR
-        )
-        @JvmStatic
-        @SubscribeEvent
-        fun onWorldTick(event: TickEvent.LevelTickEvent) {
-            if (event.phase == TickEvent.Phase.START) return
-            val level = event.level
-            if (level !is ServerLevel) return
-            val world = level as ServerLevel
-
-            val frozen = pausedChunks[world] ?: return
-            if (frozen.isEmpty()) return
-
-            val entities = nukeSpawnedEntities[world] ?: return
-            if (entities.isEmpty()) return
-
-            val iterator = entities.iterator()
-            val processedPerTick = 100
-            var count = 0
-
-            while (iterator.hasNext() && count < processedPerTick) {
-                val e = iterator.next()
-                val chunkPos = ChunkPos(e.blockPosition())
-                if (frozen.contains(chunkPos)) {
-                    e.remove(Entity.RemovalReason.UNLOADED_TO_CHUNK)
-                    iterator.remove()
-                    count++
-                }
-            }
-
-            if (entities.isEmpty()) nukeSpawnedEntities.remove(world)
-            if (frozen.isEmpty()) pausedChunks.remove(world)
         }
     }
 }
