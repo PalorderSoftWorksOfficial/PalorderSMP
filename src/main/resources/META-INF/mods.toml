@@ -32,8 +32,7 @@ logoFile="LongLiveTheEmpire.png"
 credits="Created by PalorderSoftWorksOfficial"
 authors="PalorderSoftWorksOfficial,SquidDev"
 description='''
-This is a kotlin beta build of that requires kotlin for forge!
-These builds are mostly unstable as these are included in the main jar for compatibiltity
+This is only a direct translation of the java version and so a library only!
 '''
 dependencies = [
     { modId="forge", mandatory=true, versionRange="[47,)", side="BOTH" },
