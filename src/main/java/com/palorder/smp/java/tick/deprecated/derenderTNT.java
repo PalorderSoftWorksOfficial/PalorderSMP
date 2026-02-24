@@ -1,4 +1,4 @@
-package com.palorder.smp.java.tickRelated.deprecated;
+package com.palorder.smp.java.tick.deprecated;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;

@@ -1,11 +1,9 @@
 package com.palorder.smp.java;
 
-import com.mojang.brigadier.Command;
 import com.palorder.smp.java.commands.CommandManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -16,7 +14,7 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.palorder.smp.java.tickRelated.runLater.scheduled;
+import static com.palorder.smp.java.tick.runLater.scheduled;
 
 @Mod("palordersmp_tweaked")
 @Mod.EventBusSubscriber(modid = "palordersmp_tweaked", value = Dist.DEDICATED_SERVER, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -33,14 +31,6 @@ public class PalorderSMPMainJava {
         } else {
             logger.warn("ComputerCraft is NOT present!");
         }
-    }
-        @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent e) {
-        if (e.phase != TickEvent.Phase.END) return;
-
-        long time = e.getServer().overworld().getGameTime();
-        List<Runnable> list = scheduled.remove((int) time);
-        if (list != null) for (Runnable r : list) r.run();
     }
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {

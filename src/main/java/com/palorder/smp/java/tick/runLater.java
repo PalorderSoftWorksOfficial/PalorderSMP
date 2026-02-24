@@ -1,4 +1,4 @@
-package com.palorder.smp.java.tickRelated;
+package com.palorder.smp.java.tick;
 
 import net.minecraft.server.level.ServerLevel;
 
