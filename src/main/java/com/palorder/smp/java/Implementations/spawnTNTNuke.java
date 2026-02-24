@@ -123,49 +123,55 @@ public class spawnTNTNuke {
             }
             else if ("nuke".equals(type)) {
 
-                int baseFuse = 80;
-                double gravity = -0.03D;
-                double velocityMultiplier = 1.4D;
-                int[] baseRadii = new int[]{12, 22, 32, 42, 52, 62, 72, 82, 92, 102};
+    int baseFuse = 80;
+    double gravity = -0.03D;
+    double velocityMultiplier = 1.4D;
 
-                double fallHeight = 0.5D * -gravity * baseFuse * baseFuse;
-                double spawnY = targetPos.y + fallHeight;
+    double fallHeight = 0.5D * -gravity * baseFuse * baseFuse;
+    double spawnY = targetPos.y + fallHeight;
 
-                int spawned = 0;
+    int spawned = 0;
 
-                PrimedTntExtendedAPI center = new PrimedTntExtendedAPI(EntityType.TNT, world);
-                center.setPos(targetPos.x + 0.5D, spawnY, targetPos.z + 0.5D);
-                center.setFuse(baseFuse);
-                center.setDeltaMovement(0.0D, 0.0D, 0.0D);
-                world.addFreshEntity(center);
-                nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(center);
-                spawned++;
+    PrimedTntExtendedAPI center = new PrimedTntExtendedAPI(EntityType.TNT, world);
+    center.setPos(targetPos.x + 0.5D, spawnY, targetPos.z + 0.5D);
+    center.setFuse(baseFuse);
+    center.setDeltaMovement(0.0D, 0.0D, 0.0D);
+    world.addFreshEntity(center);
+    nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(center);
+    spawned++;
 
-                while (spawned < total) {
-                    for (int r : baseRadii) {
-                        if (spawned >= total) break;
-                        int tntsInRing = Math.min(100, total - spawned);
+    int radiusStep = 10;
+    int startRadius = 12;
+    int ringCount = (int) Math.round(Math.sqrt(total) / 2.8);
 
-                        for (int i = 0; i < tntsInRing && spawned < total; i++) {
-                            double angle = Math.random() * 2.0 * Math.PI;
-                            double dx = Math.cos(angle);
-                            double dz = Math.sin(angle);
+    for (int ring = 0; ring < ringCount && spawned < total; ring++) {
 
-                            double vx = dx * (r / (double) baseFuse) * velocityMultiplier;
-                            double vz = dz * (r / (double) baseFuse) * velocityMultiplier;
+        int r = startRadius + ring * radiusStep;
 
-                            PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
-                            tnt.setPos(targetPos.x + 0.5D, spawnY, targetPos.z + 0.5D);
-                            tnt.setFuse(baseFuse);
-                            tnt.setDeltaMovement(vx, 0.0D, vz);
-                            world.addFreshEntity(tnt);
-                            nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
-                            spawned++;
-                        }
-                    }
-                }
-            }
+        int tntsInRing = (int) Math.round(2 * Math.PI * r * 0.28);
+        tntsInRing = Math.min(tntsInRing, total - spawned);
 
+        for (int i = 0; i < tntsInRing && spawned < total; i++) {
+
+            double angle = (2.0 * Math.PI * i) / tntsInRing;
+
+            double dx = Math.cos(angle);
+            double dz = Math.sin(angle);
+
+            double vx = dx * (r / (double) baseFuse) * velocityMultiplier;
+            double vz = dz * (r / (double) baseFuse) * velocityMultiplier;
+
+            PrimedTntExtendedAPI tnt = new PrimedTntExtendedAPI(EntityType.TNT, world);
+            tnt.setPos(targetPos.x + 0.5D, spawnY, targetPos.z + 0.5D);
+            tnt.setFuse(baseFuse);
+            tnt.setDeltaMovement(vx, 0.0D, vz);
+            world.addFreshEntity(tnt);
+            nukeSpawnedEntities.computeIfAbsent(world, k -> new HashSet<>()).add(tnt);
+
+            spawned++;
+        }
+    }
+}
             player.sendSystemMessage(Component.literal("Orbital strike launched! Type: " + type + ", Total: " + total));
         });
     }
