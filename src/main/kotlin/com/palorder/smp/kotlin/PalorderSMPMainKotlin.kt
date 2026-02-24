@@ -418,7 +418,7 @@ class PalorderSMPMainKotlin {
         }
 
         // ---------------- Nuke Spawn ----------------
-        @JvmStatic
+@JvmStatic
 fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int?) {
 	val world = player.level() as ServerLevel
 	val eyePos = player.eyePosition
@@ -696,4 +696,5 @@ fun spawnTNTNuke(player: ServerPlayer, tnts: Int?, type: String?, layers: Int?) 
         }
     }
 }
+
 
