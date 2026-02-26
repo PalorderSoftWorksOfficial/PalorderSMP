@@ -1,6 +1,7 @@
 -keep @net.minecraftforge.fml.common.Mod class * {
     <init>(...);
 }
+-keep com.palorder.smp.java.PalorderSMPMainJava.* { *; }
 
 -keepclassmembers class * {
     @net.minecraftforge.eventbus.api.SubscribeEvent <methods>;
